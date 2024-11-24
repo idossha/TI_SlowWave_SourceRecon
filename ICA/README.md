@@ -3,6 +3,9 @@
 - Last Update: November 23, 2024
 - Erin Schaeffer & Ido Haber
 
+
+In both cases the entrypoint is `run_ica.sh`
+
 ---
 
 ### parallel-ICA 
