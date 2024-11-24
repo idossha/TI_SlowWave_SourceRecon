@@ -1,3 +1,6 @@
 [submodule "TI-CSC"]
 	path = TI-CSC
 	url = https://github.com/idossha/TI-CSC
+[submodule "Docker/TI-CSC_loader"]
+	path = Docker/TI-CSC_loader
+	url = https://github.com/idossha/TI-CSC_loader
