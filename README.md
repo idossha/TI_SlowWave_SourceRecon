@@ -24,8 +24,8 @@ The project structure has two main components:
   
 | Pipeline             | Output                        | Framework         | Developer  | Status |
 |----------------------|-------------------------------|-------------------|------------|--------|
-| DWI                  | Power comparisons             | MATLAB + EEGLAB   | E.S        | Complete (?)|
-| TI-CS                | Power comparisons             | MATLAB + EEGLAB   | E.S        | Complete (?)|
+| DWI                  | `.niftis` DTI                 | bash, FSL, MRtrix | I.H        | 99%    |
+| TI-CS                | `.niftis`, .txt               | simNIBS, Python, MATLAB   | I.H        | Complete (?)|
 
 ---
 
