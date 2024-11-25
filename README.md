@@ -25,7 +25,7 @@ The project structure has two main components:
 | Pipeline             | Output                        | Framework         | Developer  | Status |
 |----------------------|-------------------------------|-------------------|------------|--------|
 | DWI                  | `.niftis` DTI                 | bash, FSL, MRtrix | I.H        | 99%    |
-| TI-CS                | `.niftis`, .txt               | simNIBS, Python, MATLAB   | I.H        | Complete (?)|
+| TI-CSC               | `.niftis`, `.txt`, quantified field  | simNIBS, Python, MATLAB, Docker   | I.H        | Complete (?)|
 
 ---
 
@@ -33,11 +33,11 @@ The project structure has two main components:
 
 | Pipeline             | Output                        | Framework         | Developer  | Status |
 |----------------------|-------------------------------|-------------------|------------|--------|
-| Preprocessing        | Power comparisons             | MATLAB + EEGLAB   | E.S        | Complete (?)|
-| ICA                  | Clean EEG `.set`              | MATLAB + bash     | E.S + I.H  | Complete (?)| 
-| SW-detect            | Descriptive stats, `.set` files | Python           | I.H       | Complete |
-| source-detect        | `.csv` files                  | MATLAB + Brainstorm | I.H      | in-process |
-| source-process       | Origin, involvement, `.nii`   | Python            | I.H        | 99% | 
+| EEG-preproc          | delta power comparison        | MATLAB + EEGLAB   | E.S        | Complete (?)|
+| ICA                  | artifact free EEG `.set`      | MATLAB + bash     | E.S + I.H  | Complete (?)| 
+| SW-detect            | descriptive stats, wave epochs, `.set` | Python           | I.H       | Complete |
+| source-detect        | `.csv` files, time vs location   | MATLAB + Brainstorm | I.H      | in-process |
+| source-process       | origin, involvement, `.nii`   | Python            | I.H        | 99% | 
 
 ---
 
