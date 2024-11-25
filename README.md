@@ -1,38 +1,38 @@
-Center for Sleep and Consciousness 
-Last update: November 24, 2024
-Ido Haber
 
----
-Can temporal interference stimulation influence involvement and origination of slow oscillations during nREM sleep? 
-
----
-
-- This repo aims to collect all scripts to be able to fully replicate the process taken to produce our results. 
-
-There project structure has two arms
-- TI Simulation
-- EEG processing
+# Center for Sleep and Consciousness  
+**Last update:** November 24, 2024  
+**Author:** Ido Haber  
 
 ---
 
-### Simulation
-
-- Users should refer to the TI-CSC submodule for further instructions. 
-- Allows users to reconstruct head models from MRI data and assess TI field. 
+## Can temporal interference stimulation influence involvement and origination of slow oscillations during nREM sleep?
 
 ---
 
-### EEG
+This repository aims to collect all scripts necessary to fully replicate the processes taken to produce our results.
 
-| Pipeline      |    Output     |  Framework | Developer |
------------------------------------------------
-| Preprocessing Pipeline | power comparisons | MATLAB + EEGLAB  | E.S |
------------------------------------------------
-| SW-detection | Discriptive stats, .set files | Python | I.H |
------------------------------------------------
-| source-detect | .csv files | MATLAB + Brainstorm | I.H |
------------------------------------------------
-source-process | origin, involvment, nifti | Python | 
------------------------------------------------
+The project structure has two main components:
+- **TI Simulation**
+- **EEG Processing**
 
 ---
+
+### TI Simulation
+
+- Users should refer to the TI-CSC submodule for further instructions.
+- This component allows users to reconstruct head models from MRI data and assess the TI field.
+
+---
+
+### EEG Processing
+
+| Pipeline             | Output                        | Framework         | Developer  |
+|----------------------|-------------------------------|-------------------|------------|
+| Preprocessing        | Power comparisons             | MATLAB + EEGLAB   | E.S        |
+| SW-Detection         | Descriptive stats, `.set` files | Python           | I.H        |
+| Source Detection     | `.csv` files                  | MATLAB + Brainstorm | I.H      |
+| Source Processing    | Origin, involvement, `.nii`   | Python            |            |
+
+---
+
+
