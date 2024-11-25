@@ -5,6 +5,7 @@
 
 
 In both cases the entrypoint is `run_ica.sh`
+- path to `eeglab` & `MATLAB` need to be modified 
 
 ---
 
@@ -13,7 +14,6 @@ In both cases the entrypoint is `run_ica.sh`
 - Takes a path to a directory as an input an performs ICA in parallel based on the number of cores the machine has.
 - Up to 64 parallelization maximum, and always has to be no more than half the core number of the machine.
 - requires `Parallel Computing Toolbox`
-- path to `eeglab` needs to be modified 
 - removed thread count. Running one thread as a default
 
 ---
@@ -21,7 +21,6 @@ In both cases the entrypoint is `run_ica.sh`
 ### serial-ICA 
 
 - Takes a path to a directory as an input an performs ICA in parallel based on the number of cores the machine has.
-- path to `eeglab` needs to be modified 
 - Trying to run 2 threads as a default. If fails reduced to one. 
 
 ---
