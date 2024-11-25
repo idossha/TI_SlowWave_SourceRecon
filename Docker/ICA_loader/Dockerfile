@@ -17,24 +17,23 @@ RUN apt-get update && apt-get install -y \
     build-essential
 
 # Set working directory to /home/matlab
-WORKDIR /home/matlab
+WORKDIR /home
 
 # Ensure ownership of /home/matlab
 RUN chown -R matlab:matlab /home/matlab
 
 # Download and install EEGLAB
 RUN wget https://sccn.ucsd.edu/eeglab/download/daily/eeglab2024.2.zip -O eeglab2024.2.zip && \
-    unzip eeglab2024.2.zip && \
-    mv eeglab2024.2 eeglab
+    unzip eeglab2024.2.zip 
 
 # Download and install AMICA plugin
 RUN wget https://sccn.ucsd.edu/eeglab/plugins/AMICA1.5.2.zip -O AMICA1.5.2.zip && \
-    unzip AMICA1.5.2.zip -d eeglab/plugins/AMICA1.5.2/
+    unzip AMICA1.5.2.zip -d eeglab2024.2/plugins/AMICA1.5.2/
 
 # Clone your GitHub repository
 RUN git clone https://github.com/idossha/EEG_ICA.git
 
 # Set the working directory to the cloned GitHub repository
-WORKDIR /home/matlab/EEG_ICA
+WORKDIR /home/EEG_ICA
 
 ENTRYPOINT ["/bin/bash"]
