@@ -26,12 +26,13 @@ The project structure has two main components:
 
 ### EEG Processing
 
-| Pipeline             | Output                        | Framework         | Developer  |
-|----------------------|-------------------------------|-------------------|------------|
-| Preprocessing        | Power comparisons             | MATLAB + EEGLAB   | E.S        |
-| SW-Detection         | Descriptive stats, `.set` files | Python           | I.H        |
-| Source Detection     | `.csv` files                  | MATLAB + Brainstorm | I.H      |
-| Source Processing    | Origin, involvement, `.nii`   | Python            |            |
+| Pipeline             | Output                        | Framework         | Developer  | Status |
+|----------------------|-------------------------------|-------------------|------------|--------|
+| Preprocessing        | Power comparisons             | MATLAB + EEGLAB   | E.S        | Complete (?)|
+| ICA                  | Clean EEG `.set`              | MATLAB + bash     | E.S + I.H  | Complete (?)| 
+| SW-detect            | Descriptive stats, `.set` files | Python           | I.H        | Complete |
+| source-detect        | `.csv` files                  | MATLAB + Brainstorm | I.H      | in-process |
+| source-process       | Origin, involvement, `.nii`   | Python            |            | 99% | 
 
 ---
 
