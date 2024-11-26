@@ -1,7 +1,7 @@
 
 # Use Buildx to specify the platform if building on an ARM64 machine
 # Build command:
-# docker buildx build --platform linux/amd64 -t idossha/ica-csc:v0.0.5 --load .
+# docker buildx build --platform linux/amd64 -t idossha/ica-csc:v0.1.1 --load .
 
 # Base image
 FROM mathworks/matlab:r2024b
@@ -47,15 +47,16 @@ RUN wget https://sccn.ucsd.edu/eeglab/plugins/AMICA1.5.2.zip -O AMICA1.5.2.zip &
 # Clone your GitHub repository
 RUN git clone https://github.com/idossha/EEG_ICA.git
 
-# Set the working directory to the cloned GitHub repository
-WORKDIR /home/matlab/EEG_ICA
-
 # Clear executable stack flag on MATLAB's shared libraries
-RUN execstack -c /opt/matlab/R2024b/bin/glnxa64/libmwblas.so && \
-    execstack -c /opt/matlab/R2024b/bin/glnxa64/libmwfoundation_crash_handling.so
+# RUN execstack -c /opt/matlab/R2024b/bin/glnxa64/libmwblas.so && \
+#     execstack -c /opt/matlab/R2024b/bin/glnxa64/libmwfoundation_crash_handling.so
+
+RUN echo "addpath('/home/eeglab2024.2'); savepath; eeglab('nogui'); exit;" > setup_eeglab.m
+# Run MATLAB script to set up EEGLAB and AMICA plugin
+RUN matlab -batch "run('/home/setup_eeglab.m');"
 
 # Set the working directory to the cloned GitHub repository
-WORKDIR /home/matlab/EEG_ICA
+WORKDIR /home/EEG_ICA
 
 # Set the entrypoint to bash for interactive terminal
 ENTRYPOINT ["/bin/bash"]
