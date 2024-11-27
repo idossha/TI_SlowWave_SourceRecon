@@ -112,7 +112,7 @@ classdef analyze_ica
             end
 
             % Shut down the parallel pool (optional)
-            % delete(gcp('nocreate'));
+            delete(gcp('nocreate'));
         end
     end
 end

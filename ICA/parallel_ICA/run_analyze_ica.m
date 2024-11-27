@@ -1,5 +1,5 @@
 % run_analyze_ica.m
-
+% Usage: run_analyze_ica <input_directory>
 function run_analyze_ica(inputPath)
     % This function runs analyze_ica.run_amica on the specified path
 
@@ -12,4 +12,3 @@ function run_analyze_ica(inputPath)
     % Call your analyze_ica class
     analyze_ica.run_amica(inputPath);
 end
-
