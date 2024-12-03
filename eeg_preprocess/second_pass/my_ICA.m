@@ -1,3 +1,4 @@
+
 % File: my_ICA.m
 
 % Main EEG Preprocessing Script
@@ -10,7 +11,7 @@ addpath('/Users/idohaber/Desktop/ti_process-main/')
 eeglab nogui
 
 % Define File Handling Parameters
-experiment_path = '/Volumes/CSC-Ido/EEG';
+experiment_path = '/Users/idohaber/Desktop/EEG';
 nights = {'N1'};
 subjects = {'102'};
 %subjects = {'102','107','110','111','115','116','119','121','123','125','127','128'};
@@ -52,45 +53,39 @@ for subjIdx = 1:length(subjects)
         % --- Step 1: Generate Stim Report for Original .set File ---
         fprintf('Generating stim report for original .set file...\n');
         generate_stim_report(EEG, sample_rate, original_set_fullpath, original_actualTimes);
+        fprintf('Generating hypnogram figure for original .set ...\n');
+        
+        slp = sleep_process;
 
         % --- Step 2: Remove Unwanted Sleep Stages (Keep Only NREM) ---
         fprintf('Removing data from unwanted sleep stages (keeping only NREM)...\n');
-        slp = sleep_process;
         % Reminder: remove_spec_stage(EEG, stages, savestr)
         EEG_NREM = slp.remove_spec_stage(EEG, [0 1 4 5], '_NREM');
 
-        % Update timeIndices and actualTimes after removing unwanted stages
-        if isfield(EEG_NREM.etc, 'keepIndices')
-            fprintf('Updating timeIndices and actualTimes after removing unwanted stages...\n');
-            EEG_NREM.etc.timeIndices = EEG_NREM.etc.timeIndices(EEG_NREM.etc.keepIndices);
-            EEG_NREM.etc.actualTimes = EEG_NREM.etc.actualTimes(EEG_NREM.etc.keepIndices);
-        else
-            fprintf('Warning: keepIndices not found in EEG_NREM.etc. Cannot update timeIndices and actualTimes.\n');
-        end
+        % --- Step 3: Remove Events in NaN Regions (Unwanted Sleep Stages) ---
+        fprintf('Removing events in unwanted sleep stages...\n');
+        % Identify NaN segments in EEG_NREM
+        nan_samples = any(isnan(EEG_NREM.data), 1);
+        nan_diff = diff([0 nan_samples 0]);
+        nan_starts = find(nan_diff == 1);
+        nan_ends = find(nan_diff == -1) - 1;
+        nan_regions = [nan_starts', nan_ends'];
 
-        % Remove events that were in removed segments
-        EEG_NREM = eeg_checkset(EEG_NREM, 'eventconsistency', 'makeur');
+        % Remove events that fall within NaN regions
+        EEG_NREM = remove_events_in_nan_regions(EEG_NREM, nan_regions);
 
-        % Sort events by latency
-        [~, sortIdx] = sort([EEG_NREM.event.latency]);
-        EEG_NREM.event = EEG_NREM.event(sortIdx);
-
-        % --- Step 3: Save the NREM .set File ---
+        % --- Step 4: Save the NREM .set File ---
         [~, original_base_name, ~] = fileparts(dirs(dir_ind).name);
         NREM_set_name = [original_base_name, '_NREM.set'];
         NREM_set_fullpath = fullfile(subj_sess_filepath, NREM_set_name);
         fprintf('Saving NREM .set file: %s\n', NREM_set_fullpath);
         pop_saveset(EEG_NREM, 'filename', NREM_set_name, 'filepath', subj_sess_filepath);
 
-        % --- Step 4: Generate Stim Report for NREM .set File ---
+        % --- Step 5: Generate Stim Report for NREM .set File ---
         fprintf('Generating stim report for NREM .set file...\n');
         generate_stim_report(EEG_NREM, sample_rate, NREM_set_fullpath, original_actualTimes);
 
-        % --- Step 5: Generate Hypnogram Figure After Removing Sleep Stages ---
-        fprintf('Generating hypnogram figure after removing sleep stages...\n');
-        slp.timings_figs(EEG_NREM, whichSubj, whichSess);
-
-        % --- Step 6: Identify NaN Segments ---
+        % --- Step 7: Identify NaN Segments ---
         fprintf('Identifying NaN segments...\n');
         nan_samples = any(isnan(EEG_NREM.data), 1); % Logical array indicating NaN in any channel at each time point
 
@@ -102,7 +97,7 @@ for subjIdx = 1:length(subjects)
         % Store NaN regions as [start, end] in samples
         nan_regions = [nan_starts', nan_ends'];
 
-        % --- Step 7: Reposition Events from NaN Segments ---
+        % --- Step 8: Reposition Events from NaN Segments ---
         fprintf('Repositioning critical events from NaN segments...\n');
         EEG_NREM_repositioned = reposition_events_in_nan_segments(EEG_NREM, nan_regions, original_actualTimes);
 
@@ -110,7 +105,7 @@ for subjIdx = 1:length(subjects)
         [~, sortIdx] = sort([EEG_NREM_repositioned.event.latency]);
         EEG_NREM_repositioned.event = EEG_NREM_repositioned.event(sortIdx);
 
-        % --- Step 8: Remove All NaN Segments to Create EEG_ICA ---
+        % --- Step 9: Remove All NaN Segments to Create EEG_ICA ---
         fprintf('Removing all NaN segments to create EEG_ICA...\n');
         if isempty(nan_regions)
             fprintf('No NaN segments found.\n');
@@ -135,7 +130,7 @@ for subjIdx = 1:length(subjects)
             fprintf('Removed %d NaN segments.\n', size(nan_regions,1));
         end
 
-        % --- Step 9: Save the Processed EEG_ICA File for ICA ---
+        % --- Step 10: Save the Processed EEG_ICA File for ICA ---
         new_fileName = ['Strength_' whichSubj '_' whichSess '_forICA.set'];
         EEG_ICA.filename = new_fileName;
         EEG_ICA.setname = new_fileName;
@@ -143,16 +138,29 @@ for subjIdx = 1:length(subjects)
         fprintf('Saving Processed EEG_ICA File for ICA: %s\n', new_fileName);
         pop_saveset(EEG_ICA, 'filename', new_fileName, 'filepath', subj_sess_filepath);
 
-        % --- Step 10: Generate Stim Report for forICA .set File ---
+        % --- Step 11: Generate Stim Report for forICA .set File ---
         fprintf('Generating stim report for forICA .set file...\n');
         generate_stim_report(EEG_ICA, sample_rate, forICA_set_fullpath, original_actualTimes);
 
-        % --- Step 11: Generate Hypnogram Figure After Removing NaNs ---
-        fprintf('Generating hypnogram figure after removing NaNs...\n');
-        slp.timings_figs(EEG_ICA, whichSubj, whichSess);
     end
 end
 
 fprintf('Processing completed for all subjects and nights.\n');
 
+% Helper Function: Remove events in NaN regions
+function EEG = remove_events_in_nan_regions(EEG, nan_regions)
+    if isempty(nan_regions)
+        return;
+    end
+    % Remove events that fall within NaN regions
+    event_latencies = [EEG.event.latency];
+    remove_indices = false(size(event_latencies));
+    for iRegion = 1:size(nan_regions, 1)
+        remove_indices = remove_indices | (event_latencies >= nan_regions(iRegion,1) & event_latencies <= nan_regions(iRegion,2));
+    end
+    % Remove the events
+    EEG.event(remove_indices) = [];
+    % Ensure event consistency
+    EEG = eeg_checkset(EEG, 'eventconsistency', 'makeur');
+end
 

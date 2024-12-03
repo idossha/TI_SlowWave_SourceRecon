@@ -1,4 +1,6 @@
 
+% File: generate_stim_report.m
+
 function generate_stim_report(EEG, sample_rate, set_file_path, original_actualTimes)
     % GENERATE_STIM_REPORT Generates a stim report for 'stim start' and 'stim end' events.
     %
@@ -17,14 +19,7 @@ function generate_stim_report(EEG, sample_rate, set_file_path, original_actualTi
     times_sec = [];
     shifted_times_sec = [];
     actual_times = {};
-    shift_distances = [];
-    moved_flags = [];
-
-    % Loop through each event
-    for iEv = 1:length(EEG.event)
-        event = EEG.event(iEv);
-
-        if ismember(event.type, desired_event_types)
+    shift_pes)
             % Include only events present in EEG.event (i.e., events remaining after processing)
 
             % Get original latency and calculate Time_sec
@@ -65,6 +60,17 @@ function generate_stim_report(EEG, sample_rate, set_file_path, original_actualTi
             else
                 moved_flags(end+1, 1) = false;
             end
+
+            % Find the sleep stage at the time of the event
+            % Get all sleep stages that occurred before the event
+            idx = find(sleep_stage_latencies <= event.latency);
+            if ~isempty(idx)
+                % Take the last sleep stage code before the event
+                sleep_stage = sleep_stage_codes(idx(end));
+            else
+                sleep_stage = NaN; % No sleep stage info before event
+            end
+            sleep_stages(end+1, 1) = sleep_stage;
         end
     end
 
@@ -76,42 +82,27 @@ function generate_stim_report(EEG, sample_rate, set_file_path, original_actualTi
     actual_times = actual_times(sortIdx);
     shift_distances = shift_distances(sortIdx);
     moved_flags = moved_flags(sortIdx);
+    sleep_stages = sleep_stages(sortIdx);
 
     % Create a table with the event information
-    stim_table = table(event_types, proto_types, times_sec, shifted_times_sec, actual_times, shift_distances, moved_flags, ...
-        'VariableNames', {'Event_Type', 'Proto_Type', 'Time_sec', 'Shifted_Time_sec', 'Actual_Time', 'Shift_Distance_sec', 'Moved'});
+    stim_table = table(event_types, proto_types, times_sec, shifted_times_sec, actual_times, shift_distances, moved_flags, sleep_stages, ...
+        'VariableNames', {'Event_Type', 'Proto_Type', 'Time_sec', 'Shifted_Time_sec', 'Actual_Time', 'Shift_Distance_sec', 'Moved', 'Sleep_Stage'});
 
     % Define the report file name based on the .set file name
     [folder, base_name, ~] = fileparts(set_file_path);
-    stim_report_filename = fullfile(folder, [base_name '_stim_report.txt']);
 
-    % Write the table to a text file with formatting
-    fid = fopen(stim_report_filename, 'w');
-    fprintf(fid, 'Stim Report for %s\n', base_name);
-    fprintf(fid, '================================================================================\n\n');
-    fprintf(fid, 'Event_Type\tProto_Type\tTime_sec\tShifted_Time_sec\tActual_Time\tShift_Distance_sec\tMoved\n');
-    fprintf(fid, '--------------------------------------------------------------------------------\n');
-    for i = 1:height(stim_table)
-        fprintf(fid, '%s\t\t%d\t\t%.3f\t\t%.3f\t\t%s\t\t%.3f\t\t%s\n', ...
-            stim_table.Event_Type{i}, ...
-            stim_table.Proto_Type(i), ...
-            stim_table.Time_sec(i), ...
-            stim_table.Shifted_Time_sec(i), ...
-            stim_table.Actual_Time{i}, ...
-            stim_table.Shift_Distance_sec(i), ...
-            logical_to_string(stim_table.Moved(i)));
-    end
+    % Output as CSV
+    stim_report_filename_csv = fullfile(folder, [base_name '_stim_report.csv']);
+    writetable(stim_table, stim_report_filename_csv);
+    fprintf('Stim report saved to %s\n', stim_report_filename_csv);
+
+    % Output as JSON (optional)
+    stim_report_filename_json = fullfile(folder, [base_name '_stim_report.json']);
+    stim_struct = table2struct(stim_table);
+    json_text = jsonencode(stim_struct);
+    fid = fopen(stim_report_filename_json, 'w');
+    fprintf(fid, '%s', json_text);
     fclose(fid);
-
-    fprintf('Stim report saved to %s\n', stim_report_filename);
-end
-
-% Helper Function to convert logical to 'true' or 'false' string
-function str = logical_to_string(val)
-    if val
-        str = 'true';
-    else
-        str = 'false';
-    end
+    fprintf('Stim report saved to %s\n', stim_report_filename_json);
 end
 
