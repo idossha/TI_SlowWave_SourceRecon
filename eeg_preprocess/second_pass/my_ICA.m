@@ -10,6 +10,8 @@ addpath('/Users/idohaber/Documents/MATLAB/eeglab2024.0/')
 addpath('/Users/idohaber/Desktop/ti_process-main/')
 eeglab nogui
 
+slp = sleep_process;
+
 % Define File Handling Parameters
 experiment_path = '/Users/idohaber/Desktop/EEG';
 nights = {'N1'};
@@ -17,7 +19,7 @@ subjects = {'102'};
 %subjects = {'102','107','110','111','115','116','119','121','123','125','127','128'};
 
 % Define the sample rate
-sample_rate = 500; % in Hz
+sample_rate = EEG.srate; % in Hz
 
 % Loop through each subject and night
 for subjIdx = 1:length(subjects)
@@ -55,8 +57,6 @@ for subjIdx = 1:length(subjects)
         generate_stim_report(EEG, sample_rate, original_set_fullpath, original_actualTimes);
         fprintf('Generating hypnogram figure for original .set ...\n');
         
-        slp = sleep_process;
-
         % --- Step 2: Remove Unwanted Sleep Stages (Keep Only NREM) ---
         fprintf('Removing data from unwanted sleep stages (keeping only NREM)...\n');
         % Reminder: remove_spec_stage(EEG, stages, savestr)
