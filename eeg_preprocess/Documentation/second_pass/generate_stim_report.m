@@ -1,4 +1,3 @@
-
 % File: generate_stim_report.m
 
 function generate_stim_report(EEG, sample_rate, set_file_path, original_actualTimes)
@@ -19,14 +18,24 @@ function generate_stim_report(EEG, sample_rate, set_file_path, original_actualTi
     times_sec = [];
     shifted_times_sec = [];
     actual_times = {};
-    shift_pes)
-            % Include only events present in EEG.event (i.e., events remaining after processing)
+    shift_distances = [];
+    moved_flags = [];
+    sleep_stages = [];
 
+    % Gather sleep stage information
+    sleep_stage_latencies = [EEG.event.latency];
+    sleep_stage_codes = [EEG.event.sleep_stage];
+
+    % Process events
+    for i = 1:length(EEG.event)
+        event = EEG.event(i);
+
+        if ismember(event.type, desired_event_types)
             % Get original latency and calculate Time_sec
             if isfield(event, 'original_latency')
                 original_latency = event.original_latency;
             else
-                original_latency = event.latency; % In case original_latency is not available
+                original_latency = event.latency; % Fallback to current latency if not available
             end
             time_sec = original_latency / sample_rate;
 
@@ -35,11 +44,11 @@ function generate_stim_report(EEG, sample_rate, set_file_path, original_actualTi
             proto_types(end+1, 1) = event.proto_type;
             times_sec(end+1, 1) = round(time_sec, 3);
 
-            % Calculate shifted_time_sec based on updated latency
+            % Calculate shifted_time_sec
             shifted_time_sec = event.latency / sample_rate;
             shifted_times_sec(end+1, 1) = round(shifted_time_sec, 3);
 
-            % Get original actual time using original_actualTimes and original_latency
+            % Get actual time
             event_sample = round(original_latency);
             if length(original_actualTimes) >= event_sample
                 actual_times{end+1, 1} = datestr(original_actualTimes(event_sample), 'HH:MM:SS');
@@ -61,14 +70,12 @@ function generate_stim_report(EEG, sample_rate, set_file_path, original_actualTi
                 moved_flags(end+1, 1) = false;
             end
 
-            % Find the sleep stage at the time of the event
-            % Get all sleep stages that occurred before the event
+            % Find sleep stage at the time of the event
             idx = find(sleep_stage_latencies <= event.latency);
             if ~isempty(idx)
-                % Take the last sleep stage code before the event
                 sleep_stage = sleep_stage_codes(idx(end));
             else
-                sleep_stage = NaN; % No sleep stage info before event
+                sleep_stage = NaN;
             end
             sleep_stages(end+1, 1) = sleep_stage;
         end
@@ -96,7 +103,7 @@ function generate_stim_report(EEG, sample_rate, set_file_path, original_actualTi
     writetable(stim_table, stim_report_filename_csv);
     fprintf('Stim report saved to %s\n', stim_report_filename_csv);
 
-    % Output as JSON (optional)
+    % Output as JSON
     stim_report_filename_json = fullfile(folder, [base_name '_stim_report.json']);
     stim_struct = table2struct(stim_table);
     json_text = jsonencode(stim_struct);
@@ -105,4 +112,3 @@ function generate_stim_report(EEG, sample_rate, set_file_path, original_actualTi
     fclose(fid);
     fprintf('Stim report saved to %s\n', stim_report_filename_json);
 end
-

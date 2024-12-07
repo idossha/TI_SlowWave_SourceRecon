@@ -5,6 +5,9 @@
 % Ensure that 'reposition_events_in_nan_segments.m', 'generate_stim_report.m',
 % 'sleep_process.m', and the modified 'eeg_eegrej.m' are in the MATLAB path or the current directory.
 
+% Clear workspace and command window
+clear; clc;
+
 % File Handling
 addpath('/Users/idohaber/Documents/MATLAB/eeglab2024.0/')
 addpath('/Users/idohaber/Desktop/ti_process-main/')
@@ -15,7 +18,7 @@ slp = sleep_process;
 % Define File Handling Parameters
 experiment_path = '/Users/idohaber/Desktop/EEG';
 nights = {'N1'};
-subjects = {'102'};
+subjects = {'107'};
 %subjects = {'102','107','110','111','115','116','119','121','123','125','127','128'};
 
 % Define the sample rate

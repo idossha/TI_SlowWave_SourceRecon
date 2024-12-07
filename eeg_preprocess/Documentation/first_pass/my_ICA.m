@@ -1,14 +1,17 @@
+% Clear workspace and command window
+clear; clc;
+
 % File Handling
 addpath('/Users/idohaber/Documents/MATLAB/eeglab2024.0/')
 addpath('/Users/idohaber/Desktop/ti_process-main/')
 eeglab nogui
 
 % Directory containing experiment data
-experiment_path = '/Volumes/CSC-Ido/EEG';
+experiment_path = '/Users/idohaber/Desktop/EEG';
 
 % Define lists of nights and subjects
 nights = {'N1'};
-subjects = {'107','110','111','115'};
+subjects = {'107'};
 
 % Loop through each subject and night
 for subjIdx = 1:length(subjects)
@@ -33,13 +36,12 @@ for subjIdx = 1:length(subjects)
         EEG = pop_loadset(fullfile(subj_sess_filepath, dirs(dir_ind).name));
         fprintf('Processing Subject %s, Night %s\n', whichSubj, whichSess);
 
-        % Remove data from unwanted sleep stages (keep only NREM)
-        slp = sleep_process;
-        % Reminder: remove_spec_stage(EEG, stages, savestr)
-        EEG = slp.remove_spec_stage(EEG, [0 1 4 5], '_NREM');
-
-        % Reposition events from NaN segments to nearest valid index
+        % Step 1: Reposition events in NaN segments
         EEG = reposition_events_in_nan_segments(EEG, subj_sess_filepath);
+
+        % Step 2: Remove undesired sleep stages (e.g., NREM)
+        slp = sleep_process;
+        EEG = slp.remove_spec_stage(EEG, [0 1 4 5], '_NREM');
 
         % Remove NaNs
         EEG.etc.saveNaN = 0;
