@@ -5,6 +5,7 @@ clc;
 % Add your paths and call EEGLAB for its functionality
 addpath('/Users/idohaber/Documents/MATLAB/eeglab2024.0/');
 addpath('/Users/idohaber/Desktop/ti_process-main/');
+addpath('utils')
 eeglab nogui;
 
 %% Define File Handling Parameters
