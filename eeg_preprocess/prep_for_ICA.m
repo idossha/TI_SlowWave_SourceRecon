@@ -4,17 +4,16 @@ clc;
 
 % Add your paths and call EEGLAB for its functionality
 addpath('/Users/idohaber/Documents/MATLAB/eeglab2024.0/');
-addpath('/Users/idohaber/Desktop/ti_process-main/');
 addpath('utils')
 eeglab nogui;
 
 %% Define File Handling Parameters
 
 % Base experiment path
-experiment_path = '/Users/idohaber/Desktop/EEG';
+experiment_path = '/Volumes/CSC-Ido/EEG';
 
 % Define subjects and nights
-subjects = {'102','107'}; % {'102','107','110','111','115','116','119','121','123','125','127','128'};
+subjects = {'102','107','110','111','115','116','119','121','123','125','127','128'};
 nights = {'N1'};     % {'N1', 'N2', 'N3', ...} as needed
 
 % Ensure that subjects and nights are cell arrays of strings

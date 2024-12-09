@@ -25,4 +25,23 @@ In both cases the entrypoint is `run_ica.sh`
 
 ---
 
+data transfer:
 
+Before running the actual transfer, you can test with a dry run:
+
+```bash
+rsync -avh --progress --dry-run /path/to/local/dir username@remote_host:/path/to/remote/dir
+```
+
+```bash
+rsync -avh --progress /path/to/local/dir username@remote_host:/path/to/remote/dir
+```
+
+
+Options Explained
+-a: Archive mode; preserves symbolic links, permissions, timestamps, etc.
+-v: Verbose; shows details of the transfer.
+-h: Human-readable output.
+--progress: Displays progress for each file.
+/path/to/local/dir: Path to the directory or files on your local machine.
+username@remote_host:/path/to/remote/dir: Destination on the remote server.
