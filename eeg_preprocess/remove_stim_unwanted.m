@@ -1,4 +1,4 @@
-function EEG = remove_stim_unwanted(EEG, unwanted_stages, fid)
+function EEG = remove_stim_unwanted(EEG, unwanted_stages, fid,desired_proto_type)
     % REMOVE_STIM_UNWANTED Removes stimulation protocols (stim start/end with proto_type=4)
     % that immediately follow specified unwanted sleep stages and logs the removals.
     %
@@ -22,12 +22,12 @@ function EEG = remove_stim_unwanted(EEG, unwanted_stages, fid)
     i = 1;
     while i <= length(EEG.event)
         if strcmp(EEG.event(i).type, 'stim start') && ...
-           isfield(EEG.event(i), 'proto_type') && EEG.event(i).proto_type == 4
+           isfield(EEG.event(i), 'proto_type') && EEG.event(i).proto_type == desired_proto_type
             % Find the corresponding 'stim end'
             j = i + 1;
             while j <= length(EEG.event)
                 if strcmp(EEG.event(j).type, 'stim end') && ...
-                   isfield(EEG.event(j), 'proto_type') && EEG.event(j).proto_type == 4
+                   isfield(EEG.event(j), 'proto_type') && EEG.event(j).proto_type == desired_proto_type
                     % Found a protocol
                     protocols(end+1).start_idx = i;
                     protocols(end).end_idx = j;
@@ -74,9 +74,10 @@ function EEG = remove_stim_unwanted(EEG, unwanted_stages, fid)
                 % Get the next event
                 next_event = EEG.event(iEv + 1);
 
-                % Check if next_event is 'stim start' or 'stim end' with proto_type=4
+                % Check if next_event is 'stim start' or 'stim end' with
+                % desired_proto_type
                 if (strcmp(next_event.type, 'stim start') || strcmp(next_event.type, 'stim end')) && ...
-                   isfield(next_event, 'proto_type') && next_event.proto_type == 4
+                   isfield(next_event, 'proto_type') && next_event.proto_type == desired_proto_type
 
                     % Find the protocol number
                     protocol_num = event_protocol_map(iEv + 1);

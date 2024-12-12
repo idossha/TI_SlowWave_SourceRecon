@@ -1,5 +1,4 @@
-% make figure with information about stages and stim timings
-function timings_figs(EEG, whichSubj, whichSess)
+function timings_figs(EEG, whichSubj, whichSess, desired_proto_type)
 
     % Create savepath for figures
     savepath = fullfile(EEG.filepath, 'analysis', 'sleep');
@@ -8,15 +7,15 @@ function timings_figs(EEG, whichSubj, whichSess)
     end
 
     % Grab all sleep stage events
-    all_ss = []; 
-    ss_latencies = []; 
+    all_ss = [];
+    ss_latencies = [];
     ss_nan = [];
     for iEv = 1:length(EEG.event)
         if strcmp(EEG.event(iEv).type, 'Sleep Stage')
             sleep_stage_code = str2double(EEG.event(iEv).code);
             all_ss = [all_ss sleep_stage_code];
             ss_latencies = [ss_latencies (EEG.event(iEv).latency / EEG.srate)];
-            
+
             if isnan(EEG.data(1, EEG.event(iEv).latency))
                 ss_nan = [ss_nan 1];
             else
@@ -25,12 +24,12 @@ function timings_figs(EEG, whichSubj, whichSess)
         end
     end
 
-    % Grab all stim start and stim end events with proto_type = 4
+    % Grab all stim start and stim end events with desired_proto_type
     stim_start_times = [];
     stim_end_times = [];
     for iEv = 1:length(EEG.event)
         if (strcmp(EEG.event(iEv).type, 'stim start') || strcmp(EEG.event(iEv).type, 'stim end')) && ...
-           isfield(EEG.event(iEv), 'proto_type') && EEG.event(iEv).proto_type == 4
+                isfield(EEG.event(iEv), 'proto_type') && EEG.event(iEv).proto_type == desired_proto_type
             if strcmp(EEG.event(iEv).type, 'stim start')
                 stim_start_times = [stim_start_times (EEG.event(iEv).latency / EEG.srate)];
             elseif strcmp(EEG.event(iEv).type, 'stim end')
@@ -45,8 +44,8 @@ function timings_figs(EEG, whichSubj, whichSess)
     hold on;
 
     % Plot sleep stages
-    plot(ss_latencies / 3600, -all_ss, 'k', 'LineWidth', 1.5);
-    
+    plot(ss_latencies / 3600, -all_ss, 'k', 'LineWidth', 1.5, 'DisplayName', 'Sleep Stages');
+
     % Plot stim start events as green stars
     if ~isempty(stim_start_times)
         plot(stim_start_times / 3600, zeros(size(stim_start_times)), 'g*', 'MarkerSize', 8, 'DisplayName', 'Stim Start');
@@ -64,8 +63,9 @@ function timings_figs(EEG, whichSubj, whichSess)
     xlabel('Time (hours)');
     ylabel('Sleep Stage');
     yticklabels({'', 'REM', 'NREM3', 'NREM2', 'NREM1', 'WAKE', ''});
-    title(sprintf('Subject %s Session %s Struct  %s', whichSubj, whichSess, inputname(1)), 'FontSize', 16);
-    legend('Location', 'best');
+    title(sprintf('Subject %s Session %s Struct  %s', whichSubj, whichSess, inputname(1)), 'FontSize', 16);
+
+    legend('Location', 'northeast'); % Correct placement of the legend
     grid on;
 
     % Include EEG structure name in the saved figure name

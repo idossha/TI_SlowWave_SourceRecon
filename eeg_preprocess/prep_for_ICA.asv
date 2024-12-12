@@ -13,7 +13,7 @@ eeglab nogui;
 experiment_path = '/Volumes/CSC-Ido/EEG';
 
 % Define subjects and nights
-subjects = {'102','107','110','111','115','116','119','121','123','125','127','128'};
+subjects = {'102','107','109','111','115','116','119','121'};
 nights = {'N1'};     % {'N1', 'N2', 'N3', ...} as needed
 
 % Ensure that subjects and nights are cell arrays of strings

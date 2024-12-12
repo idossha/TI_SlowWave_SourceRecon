@@ -1,7 +1,7 @@
 % timing_figs_with_nan.m
 % Creates a figure with sleep stages, stim events, and highlights NaN segments in EEG data.
 
-function timing_figs_with_nan(EEG, whichSubj, whichSess, fid, NaNSegments)
+function timing_figs_with_nan(EEG, whichSubj, whichSess, fid, NaNSegments, desired_proto_type)
     % timing_figs_with_nan - Generates a hypnogram with stim events and highlights NaN segments.
     %
     % Syntax: timing_figs_with_nan(EEG, whichSubj, whichSess, fid, NaNSegments)
@@ -27,11 +27,37 @@ function timing_figs_with_nan(EEG, whichSubj, whichSess, fid, NaNSegments)
         mkdir(savepath);
     end
 
-    % Extract sleep stage events
-    [all_ss, ss_latencies] = extract_sleep_stages(EEG);
+    % Grab all sleep stage events
+    all_ss = []; 
+    ss_latencies = []; 
+    ss_nan = [];
+    for iEv = 1:length(EEG.event)
+        if strcmp(EEG.event(iEv).type, 'Sleep Stage')
+            sleep_stage_code = str2double(EEG.event(iEv).code);
+            all_ss = [all_ss sleep_stage_code];
+            ss_latencies = [ss_latencies (EEG.event(iEv).latency / EEG.srate)];
+            
+            if isnan(EEG.data(1, EEG.event(iEv).latency))
+                ss_nan = [ss_nan 1];
+            else
+                ss_nan = [ss_nan 0];
+            end
+        end
+    end
 
-    % Extract stim start and stim end events with proto_type = 4
-    [stim_start_times, stim_end_times] = extract_stim_events(EEG);
+    % Grab all stim start and stim end events with desired_proto_type
+    stim_start_times = [];
+    stim_end_times = [];
+    for iEv = 1:length(EEG.event)
+        if (strcmp(EEG.event(iEv).type, 'stim start') || strcmp(EEG.event(iEv).type, 'stim end')) && ...
+           isfield(EEG.event(iEv), 'proto_type') && EEG.event(iEv).proto_type == desired_proto_type
+            if strcmp(EEG.event(iEv).type, 'stim start')
+                stim_start_times = [stim_start_times (EEG.event(iEv).latency / EEG.srate)];
+            elseif strcmp(EEG.event(iEv).type, 'stim end')
+                stim_end_times = [stim_end_times (EEG.event(iEv).latency / EEG.srate)];
+            end
+        end
+    end
 
     % Create figure
     fig = figure;
@@ -78,14 +104,7 @@ function timing_figs_with_nan(EEG, whichSubj, whichSess, fid, NaNSegments)
                                     'r*', 'MarkerSize', 8, 'DisplayName', 'Stim End');
     end
 
-    % Configure plot aesthetics
-    ylim([-5 2]);
-    yticks([-5:1:2]);
-    yticklabels({'', 'REM', 'NREM3', 'NREM2', 'NREM1', 'WAKE', ''});
-    xlabel('Time (hours)', 'FontSize', 12);
-    ylabel('Sleep Stage', 'FontSize', 12);
-    title(sprintf('Subject %s Session %s Struct  %s', whichSubj, whichSess, inputname(1)), 'FontSize', 16);
-    grid on;
+
 
     % Determine x-axis limits based on sleep stage latencies and NaN segments
     if ~isempty(NaNSegments)
@@ -126,6 +145,16 @@ function timing_figs_with_nan(EEG, whichSubj, whichSess, fid, NaNSegments)
         end
     end
 
+    % Configure plot aesthetics
+    ylim([-5 2]);
+    yticks([-5:1:2]);
+    yticklabels({'', 'REM', 'NREM3', 'NREM2', 'NREM1', 'WAKE', ''});
+    xlabel('Time (hours)', 'FontSize', 12);
+    ylabel('Sleep Stage', 'FontSize', 12);
+    legend('Location' , 'northeast')
+    title(sprintf('Subject %s Session %s Struct  %s', whichSubj, whichSess, inputname(1)), 'FontSize', 16);
+    grid on;
+
     % Include EEG structure name in the saved figure name with '_with_NaNs'
     eeg_struct_name = inputname(1); % Gets the variable name of EEG structure
     savestr = sprintf('Stim_Events_%s_%s_%s_with_NaNs.png', whichSubj, whichSess, eeg_struct_name);
@@ -134,102 +163,4 @@ function timing_figs_with_nan(EEG, whichSubj, whichSess, fid, NaNSegments)
 
     % Close the figure
     close(fig);
-end
-
-% Helper Function: extract_sleep_stages.m
-% Extracts sleep stage codes and their latencies from EEG.events.
-
-function [all_ss, ss_latencies] = extract_sleep_stages(EEG)
-    all_ss = []; 
-    ss_latencies = []; 
-    for iEv = 1:length(EEG.event)
-        if strcmp(EEG.event(iEv).type, 'Sleep Stage')
-            sleep_stage_code = str2double(EEG.event(iEv).code);
-            all_ss = [all_ss sleep_stage_code];
-            ss_latencies = [ss_latencies (EEG.event(iEv).latency / EEG.srate)];
-        end
-    end
-end
-
-% Helper Function: extract_stim_events.m
-% Extracts stim start and stim end times with proto_type = 4 from EEG.events.
-
-function [stim_start_times, stim_end_times] = extract_stim_events(EEG)
-    stim_start_times = [];
-    stim_end_times = [];
-    for iEv = 1:length(EEG.event)
-        if (strcmp(EEG.event(iEv).type, 'stim start') || strcmp(EEG.event(iEv).type, 'stim end')) && ...
-           isfield(EEG.event(iEv), 'proto_type') && EEG.event(iEv).proto_type == 4
-            if strcmp(EEG.event(iEv).type, 'stim start')
-                stim_start_times = [stim_start_times (EEG.event(iEv).latency / EEG.srate)];
-            elseif strcmp(EEG.event(iEv).type, 'stim end')
-                stim_end_times = [stim_end_times (EEG.event(iEv).latency / EEG.srate)];
-            end
-        end
-    end
-end
-
-% Helper Function: identify_nan_segs.m
-% Identifies segments in EEG.data that contain NaNs and logs the process.
-
-function [NaNSegments, nanIndices, totalTimeSeconds, totalTimeMinutes] = identify_nan_segs(EEG, fid)
-    % Logical array where any channel is NaN
-    nanData = any(isnan(EEG.data), 1);
-
-    % Find start and end indices of NaN segments
-    d = diff([0 nanData 0]);
-    startIdx = find(d == 1);
-    endIdx = find(d == -1) - 1;
-
-    NaNSegments = [startIdx; endIdx]';
-    nanIndices = nanData;
-
-    totalTimeSeconds = 0; % Initialize total time in seconds
-
-    if isempty(NaNSegments)
-        log_message(fid, 'No NaN segments identified.');
-        fprintf('No NaN segments identified.\n'); % Print to console
-    else
-        for i = 1:size(NaNSegments, 1)
-            % Calculate the length of the NaN segment in seconds
-            segmentLength = (NaNSegments(i, 2) - NaNSegments(i, 1)) / EEG.srate;
-
-            % Accumulate total time
-            totalTimeSeconds = totalTimeSeconds + segmentLength;
-
-            % Prepare the detailed message
-            detailedMessage = sprintf('Identified NaN segment #%d from sample %d to %d, with length (%.2f seconds).', ...
-                i, NaNSegments(i, 1), NaNSegments(i, 2), segmentLength);
-
-            % Log the message to the file
-            log_message(fid, '%s', detailedMessage);
-
-            % Print the message to the console
-            fprintf('%s\n', detailedMessage);
-        end
-
-        % Convert total time to minutes
-        totalTimeMinutes = totalTimeSeconds / 60;
-
-        % Prepare the summary message with total time
-        summaryMessage = sprintf('Found %d NaN segments with a total length of %.2f seconds (%.2f minutes).', ...
-            size(NaNSegments, 1), totalTimeSeconds, totalTimeMinutes);
-
-        % Log the summary message to the file
-        log_message(fid, '%s', summaryMessage);
-
-        % Print the summary message to the console
-        fprintf('%s\n', summaryMessage);
-    end
-end
-
-% Helper Function: log_message.m
-% Logs messages to a specified file.
-
-function log_message(fid, varargin)
-    if nargin < 2
-        return; % Nothing to log
-    end
-    fprintf(fid, varargin{:});
-    fprintf(fid, '\n'); % Add a newline character at the end
 end
