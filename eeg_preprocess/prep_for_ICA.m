@@ -20,8 +20,8 @@ nights = {'N1'};     % {'N1', 'N2', 'N3', ...} as needed
 %% Important Variables
 
 % Set to 1 if want to analyze.
-REM = 1;
-NREM = 0;
+REM = 0;
+NREM = 1;
 
 if NREM == 1 
     if REM == 1
@@ -204,6 +204,9 @@ for subjIdx = 1:length(subjects)
         catch ME
             log_message(fid, 'Error generating timing figures after removing sleep stages: %s', ME.message);
         end
+        %% Remove all other necessary events
+        keepEventTypes = { 'stim start', 'stim end'};
+        EEG_forICA = filter_events(EEG_forICA, keepEventTypes, desired_proto_type, fid);
         
         %% Save Processed EEG Data as _forICA.set
         new_fileName = sprintf('Strength_%s_%s_forICA.set', whichSubj, whichSess);
