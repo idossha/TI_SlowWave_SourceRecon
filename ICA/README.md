@@ -45,3 +45,36 @@ Options Explained
 --progress: Displays progress for each file.
 /path/to/local/dir: Path to the directory or files on your local machine.
 username@remote_host:/path/to/remote/dir: Destination on the remote server.
+
+
+
+---
+
+
+```
+error:
+
+. done. Execution time: -12.37 h                                                                         │
+ output directory =                                                                                        │
+ /Volumes/nccam_scratch/NCCAM_scratch/Ido/TI_SourceLocalization/ICA/amicaout/Str                           │
+ ength_115_N1_forICA/                                                                                      │
+Scaling components to RMS microvolt                                                                        │
+Scaling components to RMS microvolt                                                                        │
+Saving dataset...                                                                                          │
+Error processing Strength_115_N1_forICA.set: Transparency violation error.                                 │
+See <a href="matlab: helpview([docroot '/matlab/matlab_prog/matlab_prog.map'],'TransparencyViolation')">Wor│
+kspace Transparency in MATLAB Statements</a>.                                                              │
+Warning: The following error was caught while executing 'onCleanup' class destructor:                      │
+Undefined function 'cleanup_temp_files' for input arguments of type 'char'.                                │
+                                                                                                           │
+Error in <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('analyze_ica>@()cleanup_temp_f│
+iles(outdir)')" style="font-weight:bold">analyze_ica>@()cleanup_temp_files(outdir)</a>                     │
+                                                                                                           │
+Error in <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('onCleanup/delete', '/usr/loca│
+l/bin/matlab-r2024a/toolbox/matlab/lang/onCleanup.m', 25)" style="font-weight:bold">onCleanup/delete</a> (<│
+a href="matlab: opentoline('/usr/local/bin/matlab-r2024a/toolbox/matlab/lang/onCleanup.m',25,0)">line 25</a│
+>)                                                                                                         │
+            obj.task();            
+
+
+```
