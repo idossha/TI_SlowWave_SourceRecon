@@ -1,10 +1,12 @@
 
+
 # EEG Slow Wave Analysis Pipeline
 
 ## Overview
 This project contains scripts and modules for analyzing EEG data, specifically focusing on detecting and analyzing slow waves. The pipeline includes data preprocessing, event cleaning, epoch creation, wave detection, classification, and statistical analysis.
 
 ---
+
 
 ## Modules and Scripts
 
@@ -18,6 +20,7 @@ This project contains scripts and modules for analyzing EEG data, specifically f
 - **`annotate_raw.py`**: Annotates the raw EEG data with start,neg-peak,pos-peak, end for every slow wave.
 - **`extract_epochs.py`**: Extracts and saves individual epochs as `.set` files.
 - **`plot_average_waveforms.py`**: Plots average waveforms for the detected and filtered waves.
+
 
 ---
 
