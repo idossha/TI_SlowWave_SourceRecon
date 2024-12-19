@@ -10,13 +10,13 @@ eeglab nogui;
 %% Define File Handling Parameters
 
 % Base experiment path
-experiment_path = '/Volumes/CSC-Ido/EEG';
+experiment_path = '/Users/idohaber/Data';
 
 % Define subjects and nights
 %subjects = {'102','107','110','111','115','116','119','121','123','125','127','128'};
-subjects = {'119'};
+subjects = {'123'};
 nights = {'N1'};     % {'N1', 'N2', 'N3', ...} as needed
-
+ 
 %% Important Variables
 
 % Set to 1 if want to analyze.
@@ -48,6 +48,7 @@ for subjIdx = 1:length(subjects)
         
         %% Define File Paths and Names
         name_temp = sprintf('Strength_%s_%s_filt_bc_we_rmwk_noZ_rmepoch_rmbs_bc.set', whichSubj, whichSess);
+        %name_temp = sprintf('Strength_%s_%s_forSW.set', whichSubj, whichSess);
         filepath = fullfile(experiment_path, whichSubj, whichSess, name_temp);
         
         % Define log file path
@@ -85,6 +86,11 @@ for subjIdx = 1:length(subjects)
             continue; % Skip to next iteration
         end
 
+        
+        %% Invert EEG Polarity due to LPF architecture
+
+        EEG.data = -EEG.data;
+        log_message(fid, 'Inverted polarity of EEG.data');
 
         %% Generate Timing Figures (Optional)
         try
@@ -212,6 +218,12 @@ for subjIdx = 1:length(subjects)
         new_fileName = sprintf('Strength_%s_%s_forICA.set', whichSubj, whichSess);
         EEG_forICA.filename = new_fileName;
         EEG_forICA.setname = new_fileName;
+        
+        %new_fileName = sprintf('Strength_%s_%s_forSW_repolarized.set', whichSubj, whichSess);
+        %EEG_forSW_repolarized.filename = new_fileName;
+        %EEG_forSW_repolarized.setname = new_fileName;
+
+
         log_message(fid, '########################################')
         log_message(fid, 'Saving processed EEG data as %s.', new_fileName);
         try

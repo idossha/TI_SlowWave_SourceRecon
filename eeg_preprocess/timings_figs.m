@@ -8,7 +8,7 @@ function timings_figs(EEG, whichSubj, whichSess, desired_proto_type)
     %   desired_proto_type - The proto_type(s) of stim events to highlight
 
     % Create savepath for figures
-    savepath = fullfile(EEG.filepath, 'analysis', 'sleep');
+    savepath = fullfile(EEG.filepath, 'output', 'adaptation_step');
     if ~exist(savepath, 'dir')
         mkdir(savepath)
     end

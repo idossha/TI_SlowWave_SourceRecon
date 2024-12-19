@@ -15,7 +15,7 @@ function timing_figs_with_nan(EEG, whichSubj, whichSess, fid, NaNSegments, desir
     end
 
     % Create savepath for figures
-    savepath = fullfile(EEG.filepath, 'analysis', 'sleep');
+    savepath = fullfile(EEG.filepath, 'output', 'adaptation_step');
     if ~exist(savepath, 'dir')
         mkdir(savepath);
     end
