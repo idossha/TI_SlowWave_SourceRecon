@@ -1,4 +1,3 @@
-
 import mne
 import os
 import numpy as np
@@ -132,4 +131,3 @@ def plot_epoch_waveform(raw, row, sf, output_dir):
     output_path = os.path.join(output_dir, f'{slow_wave_name}_{selected_channel}.png')
     fig.savefig(output_path)
     plt.close(fig)  # Close the figure to save memory
-

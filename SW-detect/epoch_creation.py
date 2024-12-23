@@ -4,13 +4,14 @@
 import matplotlib.pyplot as plt
 import os
 
-def create_and_visualize_epochs(cleaned_events_df, output_dir):
+def create_and_visualize_epochs(cleaned_events_df, output_dir, sf):
     """
     Create pre-stim, stim, and post-stim epochs, adjust for overlaps, and visualize.
 
     Parameters:
     - cleaned_events_df: pd.DataFrame, DataFrame containing cleaned events.
     - output_dir: str, path to the output directory where images will be saved.
+    - sf: float, sampling frequency (Hz) for time-to-hours conversion.
 
     Returns:
     - pre_stim_epochs: list of tuples for pre-stim epochs.
@@ -71,78 +72,33 @@ def create_and_visualize_epochs(cleaned_events_df, output_dir):
         # Check for overlap with previous post-stim epoch
         overlap_amount = prev_post_stim_end - orig_pre_start
         if overlap_amount > 0:
-            # Define the exact overlap region before adjustments
-            overlap_start = orig_pre_start
-            overlap_end = orig_pre_start + overlap_amount
+            half_overlap = overlap_amount / 2
+            if post_stim_epochs:
+                post_stim_epochs[-1] = (
+                    post_stim_epochs[-1][0],
+                    post_stim_epochs[-1][1] - half_overlap,
+                    post_stim_epochs[-1][2]
+                )
+            orig_pre_start += half_overlap
             overlaps.append({
                 'protocols': (protocol_number - 1, protocol_number),
                 'overlap_amount': overlap_amount,
-                'overlap_start': overlap_start,
-                'overlap_end': overlap_end
+                'overlap_start': orig_pre_start - half_overlap,
+                'overlap_end': orig_pre_start
             })
 
-            # Adjust the previous post-stim epoch only if there is a previous epoch
-            if post_stim_epochs:
-                # Calculate half of the overlap amount
-                half_overlap = overlap_amount / 2
-
-                # Adjust the previous post-stim epoch
-                prev_protocol_num = post_stim_epochs[-1][2]
-                prev_post_stim = post_stim_epochs[-1]
-                adjusted_prev_post_stim_end = prev_post_stim[1] - half_overlap
-
-                # Prevent negative duration
-                if adjusted_prev_post_stim_end < prev_post_stim[0]:
-                    print(f"Warning: Negative duration for post-stim epoch of Protocol {prev_protocol_num}. Setting to original start time.")
-                    adjusted_prev_post_stim_end = prev_post_stim[0]
-
-                # Update the last post-stim epoch with the adjusted end time
-                post_stim_epochs[-1] = (prev_post_stim[0], adjusted_prev_post_stim_end, prev_protocol_num)
-
-                # Adjust the current pre-stim epoch
-                adjusted_pre_start = orig_pre_start + half_overlap
-                if adjusted_pre_start > orig_pre_end:
-                    print(f"Warning: Negative duration for pre-stim epoch of Protocol {protocol_number}. Setting to original end time.")
-                    adjusted_pre_start = orig_pre_end
-
-                pre_stim_start = adjusted_pre_start
-                pre_stim_end = orig_pre_end
-
-                print(f"Overlap detected between Protocol {prev_protocol_num} and Protocol {protocol_number}: {overlap_amount:.2f}s")
-                print(f"  Adjusting Post-Stim End Time of Protocol {prev_protocol_num} by {-half_overlap:.2f}s to {adjusted_prev_post_stim_end:.2f}s")
-                print(f"  Adjusting Pre-Stim Start Time of Protocol {protocol_number} by {half_overlap:.2f}s to {pre_stim_start:.2f}s\n")
-            else:
-                # No previous post-stim epoch to adjust
-                print(f"Overlap detected for Protocol {protocol_number}, but no previous post-stim epoch to adjust.\n")
-                # Adjust current pre-stim epoch by half the overlap
-                half_overlap = overlap_amount / 2
-                adjusted_pre_start = orig_pre_start + half_overlap
-                if adjusted_pre_start > orig_pre_end:
-                    print(f"Warning: Negative duration for pre-stim epoch of Protocol {protocol_number}. Setting to original end time.")
-                    adjusted_pre_start = orig_pre_end
-                pre_stim_start = adjusted_pre_start
-                pre_stim_end = orig_pre_end
-
-        else:
-            # No overlap; keep original pre-stim epoch
-            pre_stim_start = orig_pre_start
-            pre_stim_end = orig_pre_end
-            print(f"No overlap detected before Protocol {protocol_number}.\n")
-
-        # Append adjusted epochs
-        pre_stim_epochs.append((pre_stim_start, pre_stim_end, protocol_number))
+        pre_stim_epochs.append((orig_pre_start, orig_pre_end, protocol_number))
         stim_epochs.append((orig_stim_start, orig_stim_end, protocol_number))
         post_stim_epochs.append((orig_post_start, orig_post_end, protocol_number))
 
         # Update the end of the previous post-stim epoch
         prev_post_stim_end = orig_post_end
-
         protocol_number += 1
 
     # Visualize the epochs
     visualize_epochs(
         original_pre_stim_epochs, original_stim_epochs, original_post_stim_epochs,
-        pre_stim_epochs, stim_epochs, post_stim_epochs, overlaps, output_dir
+        pre_stim_epochs, stim_epochs, post_stim_epochs, overlaps, output_dir, sf
     )
 
     # Plot durations between "stim start" and "stim end" events
@@ -151,107 +107,108 @@ def create_and_visualize_epochs(cleaned_events_df, output_dir):
 
     return pre_stim_epochs, stim_epochs, post_stim_epochs, overlaps
 
+
 def visualize_epochs(original_pre, original_stim, original_post,
-                    adjusted_pre, adjusted_stim, adjusted_post, overlaps, output_dir):
+                     adjusted_pre, adjusted_stim, adjusted_post, overlaps, output_dir, sf):
     """
-    Visualize epochs before and after overlap adjustments.
+    Visualize epochs before and after overlap adjustments with time in hours.
 
     Parameters:
     - original_pre, original_stim, original_post: lists of tuples for original epochs.
     - adjusted_pre, adjusted_stim, adjusted_post: lists of tuples for adjusted epochs.
-    - overlaps: list of overlap information.
+    - overlaps: list of overlap information. Each overlap is a dict with 'overlap_start' and 'overlap_end' in seconds.
     - output_dir: directory to save plots.
+    - sf: Sampling frequency (in Hz).
     """
-    # --- Plot 1: Before Overlap Removal ---
-    fig, ax = plt.subplots(figsize=(15, 4))
-    plot_epochs(original_pre, original_stim, original_post, ax, title="Protocols Before Overlap Removal")
+    def seconds_to_hours(seconds):
+        return seconds / 3600.0
 
-    # Highlight overlaps
+    # Plot before overlap removal
+    fig, ax = plt.subplots(figsize=(15, 4))
+    plot_epochs(original_pre, original_stim, original_post, ax, "Before Overlap Removal", sf)
     for overlap in overlaps:
-        ax.axvspan(overlap['overlap_start'], overlap['overlap_end'], color='red', alpha=0.5, label='Overlap')
-
-    # Remove duplicate labels in the legend
+        ax.axvspan(
+            seconds_to_hours(overlap['overlap_start']),
+            seconds_to_hours(overlap['overlap_end']),
+            color='red', alpha=0.5, label='Overlap'
+        )
+    # Deduplicate legend entries
     handles, labels = ax.get_legend_handles_labels()
-    by_label = {}
+    unique_labels = {}
     for handle, label in zip(handles, labels):
-        if label not in by_label:
-            by_label[label] = handle
-    ax.legend(by_label.values(), by_label.keys(), loc='upper right')
-
-    # Save the "Before Overlap Removal" plot
-    overlap_plot_path = os.path.join(output_dir, "protocols_before_overlap_removal.png")
+        if label not in unique_labels:
+            unique_labels[label] = handle
+    ax.legend(unique_labels.values(), unique_labels.keys(), loc='upper right')
     plt.tight_layout()
-    plt.savefig(overlap_plot_path)
+    plt.savefig(os.path.join(output_dir, "before_overlap_removal.png"))
     plt.close(fig)
-    print(f"Saved plot before overlap removal to {overlap_plot_path}")
+    print(f"Saved plot before overlap removal to {os.path.join(output_dir, 'before_overlap_removal.png')}")
 
-    # --- Plot 2: After Overlap Removal ---
+    # Plot after overlap removal
     fig, ax = plt.subplots(figsize=(15, 4))
-    plot_epochs(adjusted_pre, adjusted_stim, adjusted_post, ax, title="Protocols After Overlap Removal")
-
-    # Remove duplicate labels in the legend
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = {}
-    for handle, label in zip(handles, labels):
-        if label not in by_label:
-            by_label[label] = handle
-    ax.legend(by_label.values(), by_label.keys(), loc='upper right')
-
-    # Save the "After Overlap Removal" plot
-    removal_plot_path = os.path.join(output_dir, "protocols_after_overlap_removal.png")
+    plot_epochs(adjusted_pre, adjusted_stim, adjusted_post, ax, "After Overlap Removal", sf)
     plt.tight_layout()
-    plt.savefig(removal_plot_path)
+    plt.savefig(os.path.join(output_dir, "after_overlap_removal.png"))
     plt.close(fig)
-    print(f"Saved plot after overlap removal to {removal_plot_path}")
+    print(f"Saved plot after overlap removal to {os.path.join(output_dir, 'after_overlap_removal.png')}")
 
-def plot_epochs(pre_stim_epochs, stim_epochs, post_stim_epochs, ax, title=""):
+
+def plot_epochs(pre_stim_epochs, stim_epochs, post_stim_epochs, ax, title, sf):
     """
-    Helper function to plot pre-stim, stim, and post-stim epochs on a given axis.
+    Helper function to plot pre-stim, stim, and post-stim epochs on a given axis with time in hours.
 
     Parameters:
-    - pre_stim_epochs: list of tuples, pre-stim epochs.
-    - stim_epochs: list of tuples, stim epochs.
-    - post_stim_epochs: list of tuples, post-stim epochs.
+    - pre_stim_epochs: list of tuples, pre-stim epochs. Each tuple: (start, end, protocol)
+    - stim_epochs: list of tuples, stim epochs. Each tuple: (start, end, protocol)
+    - post_stim_epochs: list of tuples, post-stim epochs. Each tuple: (start, end, protocol)
     - ax: matplotlib axis, axis to plot on.
     - title: str, title for the plot.
+    - sf: Sampling frequency (in Hz). Used to convert time from seconds to hours.
     """
-    # To avoid duplicate labels in the legend
-    pre_stim_plotted = False
-    stim_plotted = False
-    post_stim_plotted = False
+    def seconds_to_hours(seconds):
+        return seconds / 3600.0
+
+    # Flags to check if labels have been added
+    pre_stim_label_added = False
+    stim_label_added = False
+    post_stim_label_added = False
 
     # Plot pre-stim epochs
-    for (start, end, protocol) in pre_stim_epochs:
-        if not pre_stim_plotted:
-            ax.axvspan(start, end, color='blue', alpha=0.3, label='Pre-Stim')
-            pre_stim_plotted = True
+    for start, end, _ in pre_stim_epochs:
+        if not pre_stim_label_added:
+            ax.axvspan(seconds_to_hours(start), seconds_to_hours(end), color='blue', alpha=0.3, label='Pre-Stim')
+            pre_stim_label_added = True
         else:
-            ax.axvspan(start, end, color='blue', alpha=0.3)
+            ax.axvspan(seconds_to_hours(start), seconds_to_hours(end), color='blue', alpha=0.3)
 
     # Plot stim epochs
-    for (start, end, protocol) in stim_epochs:
-        if not stim_plotted:
-            ax.axvspan(start, end, color='orange', alpha=0.3, label='Stim')
-            stim_plotted = True
+    for start, end, protocol in stim_epochs:
+        if not stim_label_added:
+            ax.axvspan(seconds_to_hours(start), seconds_to_hours(end), color='orange', alpha=0.3, label='Stim')
+            stim_label_added = True
         else:
-            ax.axvspan(start, end, color='orange', alpha=0.3)
-        # Add protocol number
-        ax.text((start + end) / 2, 0.5, f'P{protocol}', color='black', fontsize=9, ha='center', va='bottom')
+            ax.axvspan(seconds_to_hours(start), seconds_to_hours(end), color='orange', alpha=0.3)
+        # Optionally, add protocol number
+        ax.text((seconds_to_hours(start) + seconds_to_hours(end)) / 2, 0.5, f'P{protocol}', color='black', fontsize=9, ha='center', va='bottom')
 
     # Plot post-stim epochs
-    for (start, end, protocol) in post_stim_epochs:
-        if not post_stim_plotted:
-            ax.axvspan(start, end, color='green', alpha=0.3, label='Post-Stim')
-            post_stim_plotted = True
+    for start, end, _ in post_stim_epochs:
+        if not post_stim_label_added:
+            ax.axvspan(seconds_to_hours(start), seconds_to_hours(end), color='green', alpha=0.3, label='Post-Stim')
+            post_stim_label_added = True
         else:
-            ax.axvspan(start, end, color='green', alpha=0.3)
+            ax.axvspan(seconds_to_hours(start), seconds_to_hours(end), color='green', alpha=0.3)
 
-    # Set labels and title
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('')
     ax.set_title(title)
-    ax.set_yticks([])  # Hide y-axis ticks for a cleaner look
+    ax.set_xlabel("Time (hours)")
+    ax.set_ylabel("Epochs")
+    # No need to set y-ticks as epochs are represented by spans
+    ax.set_yticks([])
     ax.grid(True, linestyle='--', alpha=0.5)
+
+    # No immediate legend assignment here; handled in visualize_epochs
+    # to allow for additional elements like overlaps
+
 
 def plot_durations(durations, output_dir):
     """
@@ -262,19 +219,26 @@ def plot_durations(durations, output_dir):
     - output_dir: str, directory to save the plot.
     """
     plt.figure(figsize=(10, 5))
-    plt.plot(durations, marker='o', linestyle='-', color='purple')
+    plt.plot(durations, marker='o', linestyle='-', color='purple', label='Duration')
     plt.axhline(y=170, color='r', linestyle='--', label='Min Duration (170s)')
     plt.axhline(y=220, color='r', linestyle='--', label='Max Duration (220s)')
     plt.xlabel('Stim Pair Index')
     plt.ylabel('Duration (s)')
     plt.title('Durations Between "stim start" and "stim end" Events')
-    plt.legend()
+    # Deduplicate legend entries
+    handles, labels = plt.gca().get_legend_handles_labels()
+    unique_labels = {}
+    for handle, label in zip(handles, labels):
+        if label not in unique_labels:
+            unique_labels[label] = handle
+    plt.legend(unique_labels.values(), unique_labels.keys())
     plt.grid(True)
     durations_plot_path = os.path.join(output_dir, "stim_durations.png")
     plt.tight_layout()
     plt.savefig(durations_plot_path)
     plt.close()
     print(f"Saved durations plot to {durations_plot_path}")
+
 
 def calculate_durations(cleaned_events_df):
     """
