@@ -26,7 +26,7 @@ fi
 
 
 # Execute MATLAB with the specified parameters
-"$MATLAB_CMD" -nodisplay -nosplash -sd "$SCRIPT_DIR" -r prep_for_ICA exit;"
+"$MATLAB_CMD" -nodisplay -nosplash -sd "$SCRIPT_DIR" -r prep_for_ICA exit;
 
 # Explanation of MATLAB flags:
 # -nodisplay  : Starts MATLAB without initiating any graphical display components.
