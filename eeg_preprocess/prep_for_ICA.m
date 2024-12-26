@@ -3,20 +3,22 @@ clear;
 clc;
 
 % Add your paths and call EEGLAB for its functionality
-addpath('/Users/idohaber/Documents/MATLAB/eeglab2024.0/');
-addpath('utils')
+% addpath('/Users/idohaber/Documents/MATLAB/eeglab2024.0/'); % private mac
+addpath('/home/ihaber@wisc.edu/eeglab2024.2'); % tononi1 eeglab2024
+addpath('utils');
 eeglab nogui;
 
 %% Define File Handling Parameters
 
 % Base experiment path
-experiment_path = '/Users/idohaber/Data';
+% experiment_path = '/Users/idohaber/Data';
+experiment_path = '/Volumes/nccam_scratch/NCCAM_scratch/Ido/TI_SourceLocalization/Data'; % project path from tononi1 to scratch
 
 % Define subjects and nights
-%subjects = {'102','107','110','111','115','116','119','121','123','125','127','128'};
-subjects = {'123'};
+subjects = {'103','106','108','109','111','112','114','117','118','120','122','124', '129','131','132','133','134'};
+%subjects = {'123'};
 nights = {'N1'};     % {'N1', 'N2', 'N3', ...} as needed
- 
+
 %% Important Variables
 
 % Set to 1 if want to analyze.
@@ -47,7 +49,7 @@ for subjIdx = 1:length(subjects)
         whichSess = nights{nightIdx};
         
         %% Define File Paths and Names
-        name_temp = sprintf('Strength_%s_%s_filt_bc_we_rmwk_noZ_rmepoch_rmbs_bc.set', whichSubj, whichSess);
+        name_temp = sprintf('Strength_%s_%s_forAdapt.set', whichSubj, whichSess);
         %name_temp = sprintf('Strength_%s_%s_forSW.set', whichSubj, whichSess);
         filepath = fullfile(experiment_path, whichSubj, whichSess, name_temp);
         

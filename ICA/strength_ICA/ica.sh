@@ -42,7 +42,7 @@ fi
 # Hardcode the .set file template
 # Adjust the naming pattern as required
 # Example Template: 'Strength_%s_%s_filt_bc_we_rmwk_noZ_rmepoch_rmbs_bc.set'
-SET_FILE_TEMPLATE="Strength_%s_%s_forAdapt.set"
+SET_FILE_TEMPLATE="Strength_%s_%s_forICA.set"
 
 # Validate subjects (basic check)
 if [[ ! "$SUBJECTS" =~ ^[A-Za-z0-9_,]+$ ]]; then
