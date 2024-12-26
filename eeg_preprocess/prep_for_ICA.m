@@ -4,7 +4,7 @@ clc;
 
 % Add your paths and call EEGLAB for its functionality
 % addpath('/Users/idohaber/Documents/MATLAB/eeglab2024.0/'); % private mac
-addpath('/home/ihaber@wisc.edu/eeglab2024.2'); % tononi1 eeglab2024
+addpath('/home/ihaber@ad.wisc.edu/eeglab2024.2'); % tononi1 eeglab2024
 addpath('utils');
 eeglab nogui;
 
