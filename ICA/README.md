@@ -9,6 +9,31 @@ In both cases the entrypoint is `run_ica.sh`
 
 ---
 
+
+### new_parallel_ica 
+
+- made to accomodate the STRENGTHEN dir strucutre containing the data.
+
+
+/Users/idohaber/project_dir/
+├── 123/
+│   └── N1/
+│       ├── Strength_123_N1_filt_bc_we_rmwk_noZ_rmepoch_rmbs_bc.set
+│       ├── Strength_123_N1_filt_bc_we_rmwk_noZ_rmepoch_rmbs_bc_wcomps.set
+│       └── amicaout/
+│           └── Strength_123_N1_filt_bc_we_rmwk_noZ_rmepoch_rmbs_bc/
+│               ├── status.txt
+│               ├── [AMICA output files]
+│               └── [Temporary files deleted]
+├── 124/
+│   └── N1/
+│       └── ...
+└── 125/
+    └── N1/
+        └── ...
+
+---
+
 ### parallel-ICA 
 
 - Takes a path to a directory as an input an performs ICA in parallel based on the number of cores the machine has.
@@ -16,12 +41,19 @@ In both cases the entrypoint is `run_ica.sh`
 - requires `Parallel Computing Toolbox`
 - removed thread count. Running one thread as a default
 
+
+In this case you will need to have all your .set files in the same path.
+
+
 ---
 
 ### serial-ICA 
 
 - Takes a path to a directory as an input an performs ICA in parallel based on the number of cores the machine has.
 - Trying to run 2 threads as a default. If fails reduced to one. 
+
+
+In this case you will need to have all your .set files in the same path.
 
 ---
 
