@@ -60,6 +60,7 @@ NIGHTS_MATLAB+="'}"
 
 # Set the full path to the MATLAB executable
 MATLAB_CMD="/usr/local/share/apptainer/bin/matlab-r2024a"  # tononi-1 matlab path
+# MATLAB_CMD="/Applications/MATLAB_R2024a.app/bin/matlab"    # private mac
 
 # Validate MATLAB executable
 if [ ! -x "$MATLAB_CMD" ]; then
@@ -78,6 +79,7 @@ fi
 
 # Set file template
 SET_FILE_TEMPLATE="Strength_%s_%s_forICA.set"
+# SET_FILE_TEMPLATE="Strength_%s_%s_filt_bc_we_rmwk_noZ_rmepoch_rmbs_bc.set"
 
 # Build and execute the MATLAB command
 "$MATLAB_CMD" -nodisplay -nosplash -sd "$SCRIPT_DIR" -r "run_analyze_ica('$PROJECT_DIR', $SUBJECTS_MATLAB, $NIGHTS_MATLAB, '$SET_FILE_TEMPLATE'); exit;"

@@ -1,4 +1,4 @@
- run_analyze_ica.m
+% run_analyze_ica.m
 % Usage: run_analyze_ica(projectDir, subjectsCell, nightsCell, setFileTemplate)
 % This function parses input arguments and runs the analyze_ica class method.
 function run_analyze_ica(projectDir, subjectsCell, nightsCell, setFileTemplate)
@@ -29,7 +29,8 @@ function run_analyze_ica(projectDir, subjectsCell, nightsCell, setFileTemplate)
     fprintf('Set File Template: %s\n\n', setFileTemplate);
     
     % Add EEGLAB to the MATLAB path
-    eeglabPath = '/home/ihaber@wisc.edu/eeglab2024.2';
+    eeglabPath = '/home/ihaber@ad.wisc.edu/eeglab2024.2'; % tononi1 path
+    % eeglabPath = '/Users/idohaber/Documents/MATLAB/eeglab2024.0'   % private mac
     
     % Validate EEGLAB path
     if ~exist(eeglabPath, 'dir')
@@ -40,11 +41,6 @@ function run_analyze_ica(projectDir, subjectsCell, nightsCell, setFileTemplate)
     addpath(eeglabPath);
     fprintf('Starting EEGLAB...\n');
     eeglab nogui;
-    
-    % Verify EEGLAB is properly initialized
-    if ~exist('ALLEEG', 'var')
-        error('EEGLAB failed to initialize properly');
-    end
     
     try
         % Call the analyze_ica class method to process the datasets
