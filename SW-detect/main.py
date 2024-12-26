@@ -146,12 +146,9 @@ def main():
             logging.info("Loading data...")
             raw = load_data(set_filepath)
 
-            # (Optional) Set custom montage if not already set
-            if raw.get_montage() is None:
-                # Using standard 10-20 montage; replace with 'GSN-HydroCel-256' if appropriate
-                montage = mne.channels.make_standard_montage('standard_1020')
-                raw.set_montage(montage)
-                logging.info("Standard 10-20 montage set for raw data.")
+             # 6) Plot net coverage
+            logging.info("Plotting EEG net coverage...")
+            plot_net_coverage(raw, output_dir)
 
             # 4) Plot spectrogram
             logging.info("Plotting spectrogram...")
@@ -160,10 +157,6 @@ def main():
             # 5) Filter and resample the data
             logging.info("Filtering and resampling data...")
             raw, sf, filter_details = filter_and_resample(raw)
-
-            # 6) Plot net coverage
-            logging.info("Plotting EEG net coverage...")
-            plot_net_coverage(raw, output_dir)
 
             # 7) Clean events
             logging.info("Cleaning events...")
@@ -217,13 +210,7 @@ def main():
                 continue
 
             df_filtered = pd.read_csv(selected_csv_path)
-
-            # Debugging: Print the columns and first few rows
-            logging.info("Columns in df_filtered:")
-            logging.info(df_filtered.columns.tolist())
-            logging.info("First few rows of df_filtered:")
-            logging.info(df_filtered.head())
-
+            
             # 16) Statistical analysis & plotting
             logging.info("Performing statistical analysis and plotting...")
             perform_statistical_analysis(
