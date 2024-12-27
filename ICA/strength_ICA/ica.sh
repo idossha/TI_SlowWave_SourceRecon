@@ -18,5 +18,5 @@ if [ ! -f "$MATLAB_CMD" ]; then
 fi
 
 # Now just run your do_ica.m file
-"$MATLAB_CMD" -nodisplay -nosplash -sd "$SCRIPT_DIR" -r "do_ica; exit;"
+"$MATLAB_CMD" -nodisplay -nosplash -sd "$SCRIPT_DIR" -r "run_analyze_ica; exit;"
 
