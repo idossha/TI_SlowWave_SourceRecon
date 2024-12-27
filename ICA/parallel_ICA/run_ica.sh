@@ -27,7 +27,8 @@ if [ ! -d "$DIR" ]; then
 fi
 
 # Set the full path to the MATLAB executable
-MATLAB_CMD="/Applications/MATLAB_R2024a.app/bin/matlab"
+# MATLAB_CMD="/Applications/MATLAB_R2024a.app/bin/matlab"    # for private mac
+MATLAB_CMD="/usr/local/share/apptainer/bin/matlab-r2024a"  # for Tononi1
 
 if [ ! -x "$MATLAB_CMD" ]; then
     echo "MATLAB executable not found or not executable at '$MATLAB_CMD'"
