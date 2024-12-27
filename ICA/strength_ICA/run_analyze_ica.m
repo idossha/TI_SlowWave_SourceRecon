@@ -1,59 +1,49 @@
-% run_analyze_ica.m
-% Usage: run_analyze_ica(projectDir, subjectsCell, nightsCell, setFileTemplate)
-% This function parses input arguments and runs the analyze_ica class method.
-function run_analyze_ica(projectDir, subjectsCell, nightsCell, setFileTemplate)
-    % Validate inputs
-    if nargin ~= 4
-        error('run_analyze_ica requires exactly 4 input arguments: projectDir, subjectsCell, nightsCell, setFileTemplate.');
-    end
-    
-    % Validate input types
-    if ~ischar(projectDir)
-        error('projectDir must be a character array');
-    end
-    if ~iscell(subjectsCell) || ~all(cellfun(@ischar, subjectsCell))
-        error('subjectsCell must be a cell array of strings');
-    end
-    if ~iscell(nightsCell) || ~all(cellfun(@ischar, nightsCell))
-        error('nightsCell must be a cell array of strings');
-    end
-    if ~ischar(setFileTemplate)
-        error('setFileTemplate must be a character array');
-    end
-    
-    % Display the received parameters
-    fprintf('\nInitializing ICA Analysis with parameters:\n');
-    fprintf('Project Directory: %s\n', projectDir);
-    fprintf('Subjects: %s\n', strjoin(subjectsCell, ', '));
-    fprintf('Nights/Sessions: %s\n', strjoin(nightsCell, ', '));
-    fprintf('Set File Template: %s\n\n', setFileTemplate);
-    
-    % Add EEGLAB to the MATLAB path
-    eeglabPath = '/home/ihaber@ad.wisc.edu/eeglab2024.2'; % tononi1 path
-    % eeglabPath = '/Users/idohaber/Documents/MATLAB/eeglab2024.0'   % private mac
-    
-    % Validate EEGLAB path
-    if ~exist(eeglabPath, 'dir')
-        error('EEGLAB path does not exist: %s', eeglabPath);
-    end
-    
-    % Add EEGLAB to path and start it
-    addpath(eeglabPath);
-    fprintf('Starting EEGLAB...\n');
-    eeglab nogui;
-    
-    try
-        % Call the analyze_ica class method to process the datasets
-        fprintf('Starting ICA analysis...\n');
-        analyze_ica.run_amica_project(projectDir, subjectsCell, nightsCell, setFileTemplate);
-        fprintf('ICA analysis completed successfully.\n');
-    catch ME
-        % Handle any errors that occur during processing
-        fprintf('\nError during ICA analysis:\n');
-        fprintf('Error message: %s\n', ME.message);
-        fprintf('Error identifier: %s\n', ME.identifier);
-        fprintf('Stack trace:\n');
-        disp(ME.stack);
-        error('ICA analysis failed. See error details above.');
-    end
-end
+
+% do_ica.m
+% A single MATLAB script to set all parameters and run ICA.
+
+clear; clc; close all;
+
+% -------------------------------------------------------
+% 1) Add your necessary paths (EEGLAB, utility functions, etc.)
+% -------------------------------------------------------
+% Replace these with real folder paths on your system/HPC:
+addpath('/home/ihaber@ad.wisc.edu/eeglab2024.2');  % Tononi-1
+addpath('utils');  % if you have a local "utils" folder
+
+% -------------------------------------------------------
+% 2) Initialize EEGLAB in nogui mode
+% -------------------------------------------------------
+eeglab nogui;
+
+% -------------------------------------------------------
+% 3) Set your data location and subject details
+% -------------------------------------------------------
+% Path to your dataset
+experiment_path = '/Volumes/nccam_scratch/NCCAM_scratch/Ido/TI_SourceLocalization/Data';
+
+% Define subjects and nights (hard-coded here)
+subjects = {'103','106','108','109','111','112','114','117','118','120','122','124','129','131','132','133','134'};
+nights   = {'N1'};  % or add more: {'N1','N2','N3'}
+
+
+% -------------------------------------------------------
+% 4) Define the .set file template for the run_amica call
+% -------------------------------------------------------
+setFileTemplate = 'Strength_%s_%s_forICA.set';
+% or whatever you need:
+% setFileTemplate = 'Strength_%s_%s_filt_bc_we_rmwk_noZ_rmepoch_rmbs_bc.set';
+
+% -------------------------------------------------------
+% 5) Call your main ICA routine
+% -------------------------------------------------------
+analyze_ica.run_amica_project( ...
+    experiment_path, ...
+    subjects, ...
+    nights, ...
+    setFileTemplate ...
+);
+
+% Done.
+disp('ICA analysis completed successfully!');
+
