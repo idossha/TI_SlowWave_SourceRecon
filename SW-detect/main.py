@@ -6,7 +6,6 @@ import glob
 import logging
 import pandas as pd
 
-# Import your separate pipeline modules
 from event_cleaning import clean_events
 from epoch_creation import create_and_visualize_epochs
 from annotate_raw import annotate_raw_data
@@ -24,8 +23,7 @@ from spectrogram_plot import plot_spectrogram_with_annotations
 from load_data import load_data
 from filter import filter_and_resample
 
-# Import the topoplot module
-from plot_topomaps import plot_topomaps
+
 
 def setup_logging(output_dir):
     """
