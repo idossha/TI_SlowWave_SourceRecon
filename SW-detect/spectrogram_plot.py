@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 
 def plot_spectrogram_with_annotations(raw, output_dir, preferred_channel_indices=[80, 89, 79, 44]):
     """
-    Plot and save a spectrogram for the given EEG data with annotations overlaid.
+    Plot and save a spectrogram for the given EEG data with annotations overlaid,
+    but only if the annotation description is "stim start" or "stim end".
 
     Parameters:
         raw (mne.io.Raw): The raw EEG data object.
@@ -47,16 +48,23 @@ def plot_spectrogram_with_annotations(raw, output_dir, preferred_channel_indices
         figsize=(15, 7)
     )
 
-    # Overlay annotations
+    # Overlay annotations only if they are "stim start" or "stim end"
     annotations = raw.annotations
+    found_stim = False
     if len(annotations):
         for annot in annotations:
-            onset_sec = annot['onset'] / 3600  # Convert to hours for the x-axis
-            # Add a transparent vertical band for the event
-            plt.axvline(x=onset_sec, color='yellow', alpha=1, linestyle='--', linewidth=2)
-            # Add a marker at the top
-            plt.plot(onset_sec, plt.ylim()[1], marker='v', color='red', markersize=10)
-        plt.legend(['Stim events'], loc='upper right')
+            description = annot['description'].lower()
+            if description in ["stim start", "stim end"]:
+                found_stim = True
+                # Convert onset from seconds to hours for the yasa spectrogram x-axis
+                onset_sec = annot['onset'] / 3600
+                # Draw a vertical line
+                plt.axvline(x=onset_sec, color='yellow', alpha=1, linestyle='--', linewidth=2)
+                # Add a marker at the top
+                plt.plot(onset_sec, plt.ylim()[1], marker='v', color='red', markersize=10)
+        # If we found any "stim" annotations, add a legend
+        if found_stim:
+            plt.legend(['Stim events'], loc='upper right')
 
     # Save the spectrogram plot
     spectrogram_path = os.path.join(output_dir, f'spectrogram_{selected_channel}.png')
@@ -64,3 +72,4 @@ def plot_spectrogram_with_annotations(raw, output_dir, preferred_channel_indices
 
     # Close the figure
     plt.close(fig)
+
