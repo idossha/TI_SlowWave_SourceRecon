@@ -39,11 +39,11 @@ function main()
     AutoCSV          = [eegBaseName, '_scouts.csv'];
 
     % === RUN STEPS:
-    importAnatomy(SubjectName, AnatDir);                  % 1) Import Anatomy
+    importAnatomy(SubjectName, AnatDir);                            % 1) Import Anatomy
     importMainEEG(SubjectName, MainEEGFile, EventName, EpochTime);  % 2) Import main EEG
-    importNoiseEEG(SubjectName, NoiseEEGFile, NoiseTime);            % 3) Import noise EEG
-    overwriteChannelAll(SubjectName, ChannelFileXYZ);                % 4) Overwrite channel
-    computeNoiseCov(SubjectName, NoiseTime);                          % 5) Compute noise cov
+    importNoiseEEG(SubjectName, NoiseEEGFile, NoiseTime);           % 3) Import noise EEG
+    overwriteChannelAll(SubjectName, ChannelFileXYZ);               % 4) Overwrite channel
+    computeNoiseCov(SubjectName, NoiseTime);                         % 5) Compute noise cov
     if GenerateBEMSrf
         generateBEM(SubjectName);                                     % 6) BEM
     end
