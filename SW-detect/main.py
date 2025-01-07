@@ -201,7 +201,7 @@ def main():
             filter_and_save_epochs(df_sorted, output_dir)
 
             # 15) Load the default filtered CSV
-            selected_csv_filename = 'filtered_epochs_500ms_most_negative.csv'
+            selected_csv_filename = 'filtered_epochs_500ms_first.csv'
             selected_csv_path = os.path.join(output_dir, selected_csv_filename)
             if not os.path.exists(selected_csv_path):
                 logging.warning(f"Selected CSV file not found: {selected_csv_path}")
