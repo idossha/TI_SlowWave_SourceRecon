@@ -1,9 +1,0 @@
-mne
-numpy
-pandas
-yasa
-matplotlib
-seaborn
-scipy
-argparse
-eeglabio

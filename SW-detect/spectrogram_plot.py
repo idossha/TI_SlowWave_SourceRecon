@@ -1,13 +1,20 @@
 
+# spectrogram_plot.py
+
 import os
+import logging
 import mne
 import yasa
 import matplotlib.pyplot as plt
 
+# Create a module-level logger
+logger = logging.getLogger(__name__)
+
 def plot_spectrogram_with_annotations(raw, output_dir, preferred_channel_indices=[80, 89, 79, 44]):
     """
     Plot and save a spectrogram for the given EEG data with annotations overlaid,
-    but only if the annotation description is "stim start" or "stim end".
+    specifically highlighting "stim start" or "stim end" events.
+    The plot is saved as 'spectrogram.png' and includes the channel name in the title.
 
     Parameters:
         raw (mne.io.Raw): The raw EEG data object.
@@ -34,21 +41,26 @@ def plot_spectrogram_with_annotations(raw, output_dir, preferred_channel_indices
     if selected_channel is None:
         selected_channel = channels[0]
 
+    logger.info(f"Selected Channel for spectrogram: {selected_channel}")
+
     # Extract the data for the selected channel
     data = raw.get_data(picks=selected_channel).flatten()
-
-    # Log the selected channel
-    print(f"Selected Channel: {selected_channel}")
 
     # Generate the spectrogram
     fig = yasa.plot_spectrogram(
         data,
         sf=raw.info['sfreq'],
-        title=f"Spectrogram - {selected_channel}",
+        fmin=0.5, fmax=25, trimperc=2.5, cmap='RdBu_r', vmin=None, vmax=None,
         figsize=(15, 7)
     )
 
-    # Overlay annotations only if they are "stim start" or "stim end"
+    # Access the spectrogram axes (assuming it's the first and only axes)
+    ax = fig.axes[0]
+
+    # Set a meaningful title including the channel name
+    ax.set_title(f"Spectrogram - {selected_channel}", fontsize=10)
+
+    # Overlay annotations that are "stim start" or "stim end"
     annotations = raw.annotations
     found_stim = False
     if len(annotations):
@@ -56,20 +68,22 @@ def plot_spectrogram_with_annotations(raw, output_dir, preferred_channel_indices
             description = annot['description'].lower()
             if description in ["stim start", "stim end"]:
                 found_stim = True
-                # Convert onset from seconds to hours for the yasa spectrogram x-axis
-                onset_sec = annot['onset'] / 3600
-                # Draw a vertical line
-                plt.axvline(x=onset_sec, color='yellow', alpha=1, linestyle='--', linewidth=2)
-                # Add a marker at the top
-                plt.plot(onset_sec, plt.ylim()[1], marker='v', color='red', markersize=10)
-        # If we found any "stim" annotations, add a legend
+                # Convert onset from seconds to hours for the spectrogram's x-axis
+                onset_hr = annot['onset'] / 3600
+                ax.axvline(x=onset_hr, color='yellow', alpha=0.8, linestyle='--', linewidth=2)
+                ax.plot(onset_hr, ax.get_ylim()[1], marker='v', color='red', markersize=10)
+                logger.info(f"Added stim marker for annotation: '{annot['description']}' at {annot['onset']}s")
+
         if found_stim:
-            plt.legend(['Stim events'], loc='upper right')
+            ax.legend(['Stim events'], loc='upper right')
+        else:
+            logger.info("No 'stim start' or 'stim end' annotations found to overlay.")
 
-    # Save the spectrogram plot
-    spectrogram_path = os.path.join(output_dir, f'spectrogram_{selected_channel}.png')
+    # Save the spectrogram plot (always named "spectrogram.png")
+    spectrogram_path = os.path.join(output_dir, 'spectrogram.png')
     fig.savefig(spectrogram_path, dpi=300, bbox_inches='tight')
+    logger.info(f"Spectrogram saved to {spectrogram_path}")
 
-    # Close the figure
+    # Close the figure to free up memory
     plt.close(fig)
 

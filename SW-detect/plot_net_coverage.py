@@ -2,8 +2,12 @@
 # plot_net_coverage.py
 
 import os
+import logging
 import matplotlib.pyplot as plt
 import mne
+
+# Create a module-level logger for this file
+logger = logging.getLogger(__name__)
 
 def plot_net_coverage(raw, output_dir):
     """
@@ -14,19 +18,18 @@ def plot_net_coverage(raw, output_dir):
         raw (mne.io.Raw): The raw EEG data object.
         output_dir (str): Directory to save the output plots.
     """
-    # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
     # Plot 2D sensors
-    print("Plotting 2D net coverage...")
+    logger.info("Plotting 2D net coverage...")
     fig_2d = raw.plot_sensors(kind='topomap', show_names=True, show=False)
     output_file_2d = os.path.join(output_dir, "net_coverage_2D.png")
     fig_2d.savefig(output_file_2d, dpi=300, bbox_inches='tight')
     plt.close(fig_2d)
-    print(f"2D net coverage plot saved to {output_file_2d}")
+    logger.info(f"2D net coverage plot saved to {output_file_2d}")
 
     # Plot 3D sensors
-    print("Plotting 3D net coverage...")
+    logger.info("Plotting 3D net coverage...")
     fig_3d = raw.plot_sensors(kind='3d', show_names=True, show=False)
     # Adjust the view angle for better visualization
     ax_3d = fig_3d.axes[0]
@@ -34,4 +37,5 @@ def plot_net_coverage(raw, output_dir):
     output_file_3d = os.path.join(output_dir, "net_coverage_3D.png")
     fig_3d.savefig(output_file_3d, dpi=300, bbox_inches='tight')
     plt.close(fig_3d)
-    print(f"3D net coverage plot saved to {output_file_3d}")
+    logger.info(f"3D net coverage plot saved to {output_file_3d}")
+
