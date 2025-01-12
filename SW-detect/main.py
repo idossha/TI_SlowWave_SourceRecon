@@ -159,12 +159,12 @@ def main():
             from wave_filtering import filter_and_save_epochs
             from plot_average_waveforms import plot_waveforms
             from statistical_analysis import perform_statistical_analysis
-            from metadata_summary import save_eeg_metadata
             from group_analysis import append_to_group_summary
             from plot_net_coverage import plot_net_coverage
             from spectrogram_plot import plot_spectrogram_with_annotations
             from load_data import load_data
             from filter import filter_and_resample
+            from my_plotting import (plot_ptp_histogram,plot_ptp_slope_by_classification, plot_parameter_time)
 
             # 4) Load the data
             logger.info("Loading data...")
@@ -239,6 +239,22 @@ def main():
             # 18) Plot average waveforms
             logger.info("Plotting average waveforms...")
             plot_waveforms(raw, df_filtered, sf, output_dir, suffix='filtered')
+            
+
+            logger.info("STEP 19) Additional plotting...")
+
+            # Plot parameter vs. time (scatter + trend)
+            logger.info("Plotting parameters over time...")
+            plot_parameter_time(df_filtered, output_dir, logger=logger)
+
+            # Plot PTP vs. Slope by Classification
+            logger.info("Plotting PTP vs. Slope by classification...")
+            plot_ptp_slope_by_classification(df_filtered, output_dir, logger=logger)
+
+            # Plot PTP histogram
+            logger.info("Plotting PTP histogram...")
+            plot_ptp_histogram(df_filtered, output_dir, logger=logger)
+
 
             # 19) Append data to group_summary
             logger.info("Appending to group_summary.csv...")
