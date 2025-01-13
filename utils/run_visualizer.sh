@@ -3,14 +3,17 @@
 # A Bash script to compile PDFs with different layout options.
 
 # ---- USER CONFIGURATIONS ----
-PROJECT_DIR="/Volumes/CSC-Ido/DATA_not_to_be_worked_w_directly"
-# SUBJECTS=("101" "102")
-SUBJECTS=("101" "102" "107" "110" "115" "116" "119" "121" "123" "127" "128")
+PROJECT_DIR="/Volumes/CSC-Ido/Analyze/"
+SUBJECTS=("101" "102" "107" "108" "109" "110" "111" "112" "114" "115" "116" "117" "119" "120" "121" "122" "127" "132")
+# SUBJECTS=("101")
 NIGHTS=("N1")
 IMAGES=(
   "spectrogram.png"
   "stim_durations.png"
   "net_coverage_2D.png"
+  "first_vs_last/Frequency_first_vs_last_hour.png"
+  "first_vs_last/PTP_first_vs_last_hour.png"
+  "first_vs_last/Slope_first_vs_last_hour.png"
   "overall_counts_filtered.png"
   "overall_mean_values_filtered.png"
   "region_posterior_counts_filtered.png"
@@ -19,6 +22,10 @@ IMAGES=(
   "region_R_frontal_mean_values_filtered.png"
   "region_L_frontal_counts_filtered.png"
   "region_L_frontal_mean_values_filtered.png"
+  "plots_all_protocols/Frequency_vs_Start_all_protocols.png"
+  "plots_all_protocols/Slope_vs_Start_all_protocols.png"
+  "plots_all_protocols/PTP_vs_Start_all_protocols.png"
+  "plots_all_protocols/PTP_vs_Slope_all_protocols.png"
 )
 
 MARGIN=0.25
@@ -58,6 +65,15 @@ case "$1" in
       --nights "${NIGHTS[@]}" \
       --images "${IMAGES[@]}" \
       --layouts 2x2 3x2 1x2x2 \
+      --margin "$MARGIN"
+    ;;
+  layout3)
+    # Example: 2x2, 3x2, 1x2x2
+    python3 visualizer.py "$PROJECT_DIR" \
+      --subjects "${SUBJECTS[@]}" \
+      --nights "${NIGHTS[@]}" \
+      --images "${IMAGES[@]}" \
+      --layouts single 1x2 3x1 2x2 2x2 2x2 \
       --margin "$MARGIN"
     ;;
   *)

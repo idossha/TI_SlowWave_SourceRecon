@@ -35,6 +35,13 @@ LAYOUTS = {
         'title': True,
         'images_required': 2
     },
+    '3x1': {
+        'type': 'grid',
+        'cols': 3,
+        'rows': 1,
+        'title': True,
+        'images_required': 3
+    },
     '3x2': {
         'type': 'grid',
         'cols': 3,
@@ -109,15 +116,10 @@ def draw_single_slide_layout(c, subject, night, images, layout_config, margin, w
     Draw exactly ONE PDF page (slide) using the given layout with the given images (which must match
     the required count). If 'images' is empty, skip (no page).
     """
-    if not images:
-        return
-
-    from PIL import Image
-
     include_title = layout_config.get('title', False)
 
     # Reserve space for title if needed
-    title_space = 0.5 * inch if include_title else 0.0
+    title_space = 0.8 * inch if include_title else 0.0
 
     # Draw the title
     if include_title:
