@@ -164,6 +164,7 @@ def main():
             from spectrogram_plot import plot_spectrogram_with_annotations
             from load_data import load_data
             from filter import filter_and_resample
+            from first_vs_last import slopes_first_vs_last
             from my_plotting import (plot_ptp_histogram,plot_ptp_slope_by_classification, plot_parameter_time)
 
             # 4) Load the data
@@ -194,7 +195,13 @@ def main():
 
             # 10) Detect slow waves
             logger.info("Detecting slow waves...")
-            sw_df = detect_slow_waves(raw)
+            sw_df = detect_slow_waves(raw, output_dir)
+            
+            # 10b) Compare slopes: first vs. last hour
+            logger.info("Comparing slopes in the first vs. last hour (original_detection.csv).")
+            original_detection_csv = os.path.join(output_dir, "original_detection.csv")
+            slopes_first_vs_last(original_detection_csv, output_dir)
+
 
             # 11) Classify and filter waves
             logger.info("Classifying and filtering waves...")

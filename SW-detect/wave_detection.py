@@ -1,13 +1,14 @@
 # wave_detection.py
 
 import logging
+import os
 import yasa
 import pandas as pd
 
 # Create a module-level logger
 logger = logging.getLogger(__name__)
 
-def detect_slow_waves(raw):
+def detect_slow_waves(raw, output_dir="output"):
     """
     Detect slow waves in the raw EEG data.
 
@@ -35,6 +36,10 @@ def detect_slow_waves(raw):
         sw_df = sw.summary()
         logger.info(f"Slow wave detection completed. Number of slow waves detected: {len(sw_df)}")
         
+        #Save sw_df to CSV
+        csv_path = os.path.join(output_dir, "original_detection.csv")
+        sw_df.to_csv(csv_path, index=False)
+
         return sw_df
 
     except Exception as e:

@@ -21,7 +21,8 @@ def plot_parameter_time(
 ):
     """
     Plots each parameter in params_to_plot vs. time_col, both for each protocol (if protocol_col exists)
-    and for all protocols combined. A linear trend line is added for each plot.
+    and for all protocols combined. Each scatter is color-coded by 'Classification' (if present).
+    Adds a linear trend line for each classification group, plus one overall trend line.
 
     Parameters
     ----------
@@ -94,14 +95,14 @@ def _plot_one_param_vs_time(
     param_col: str,
     protocol=None,
     output_dir="plots",
-    logger=None
+    logger=None,
+    class_col: str = "Classification"
 ):
     """
-    Internal helper function to do the actual time vs. param scatter + trend.
+    Internal helper function to do the actual time vs. param scatter, 
+    color-coded by classification if available. Each classification 
+    has its own linear trend line, plus an overall trend line.
     """
-    if logger:
-        logger.debug(f"[_plot_one_param_vs_time] param_col={param_col}, protocol={protocol}")
-
     x = df[time_col]
     y = df[param_col]
 
@@ -113,14 +114,42 @@ def _plot_one_param_vs_time(
         title_str = f"{param_col} over {time_col} - All Protocols Combined"
         filename = f"{param_col}_vs_{time_col}_all_protocols.png"
 
+    # Prepare figure
     plt.figure(figsize=(8, 5))
-    plt.scatter(x, y, color="blue", marker="o", label="Data")
 
-    # Linear fit if enough data
-    if len(x) > 1:
-        coefs = np.polyfit(x, y, 1)
-        poly_fn = np.poly1d(coefs)
-        plt.plot(x, poly_fn(x), "r--", label="Linear Trend")
+    # If classification column exists, color-code scatter by classification
+    if class_col in df.columns:
+        unique_classes = df[class_col].dropna().unique()
+        # A simple color palette. Extend for more classes if needed
+        colors = ["red", "green", "blue", "purple", "orange", "brown", "pink", "gray"]
+
+        # Plot each classification group
+        for idx, cls in enumerate(unique_classes):
+            subset = df[df[class_col] == cls]
+            x_sub = subset[time_col]
+            y_sub = subset[param_col]
+            color = colors[idx % len(colors)]
+            plt.scatter(x_sub, y_sub, color=color, alpha=0.7, label=f"{cls}")
+
+            # Linear trend line for this classification
+            if len(x_sub) > 1:
+                coefs = np.polyfit(x_sub, y_sub, 1)
+                poly_fn = np.poly1d(coefs)
+                plt.plot(x_sub, poly_fn(x_sub), linestyle="--", color=color, alpha=0.9)
+
+        # Overall trend line across all data (regardless of classification)
+        if len(x) > 1:
+            coefs_all = np.polyfit(x, y, 1)
+            poly_fn_all = np.poly1d(coefs_all)
+            plt.plot(x, poly_fn_all(x), "k-", linewidth=2, label="Overall Trend")
+
+    else:
+        # No classification column; do a single scatter + single line
+        plt.scatter(x, y, color="blue", marker="o", label="Data")
+        if len(x) > 1:
+            coefs = np.polyfit(x, y, 1)
+            poly_fn = np.poly1d(coefs)
+            plt.plot(x, poly_fn(x), "r--", label="Linear Trend")
 
     plt.title(title_str)
     plt.xlabel(f"{time_col} (s)")
@@ -133,7 +162,7 @@ def _plot_one_param_vs_time(
     plt.close()
 
     if logger:
-        logger.debug(f"[_plot_one_param_vs_time] Saved plot -> {save_path}")
+        logger.debug(f"[_plot_one_param_vs_time] param_col={param_col}, protocol={protocol}, saved -> {save_path}")
 
 
 ###############################################################################
@@ -217,7 +246,7 @@ def _plot_ptp_slope_by_class(
         return
 
     unique_classes = df[class_col].dropna().unique()
-    # A simple color palette. Extend for more than 5 classes.
+    # A simple color palette. Extend if you have more classes
     colors = ["red", "green", "blue", "purple", "orange"]
 
     if protocol is not None:
