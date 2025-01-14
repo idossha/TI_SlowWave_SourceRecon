@@ -42,12 +42,18 @@ LAYOUTS = {
         'title': True,
         'images_required': 3
     },
-    '3x2': {
+     '3x2': {
         'type': 'grid',
         'cols': 3,
         'rows': 2,
         'title': True,
         'images_required': 6
+    },   '3x3': {
+        'type': 'grid',
+        'cols': 3,
+        'rows': 3,
+        'title': True,
+        'images_required': 9
     },
     '1x2x2': {
         'type': 'custom',

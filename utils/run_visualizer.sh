@@ -14,6 +14,15 @@ IMAGES=(
   "first_vs_last/Frequency_first_vs_last_hour.png"
   "first_vs_last/PTP_first_vs_last_hour.png"
   "first_vs_last/Slope_first_vs_last_hour.png"
+  "first_vs_last/Left_Frontal/Frequency_first_vs_last_Left_Frontal.png"
+  "first_vs_last/Left_Frontal/PTP_first_vs_last_Left_Frontal.png"
+  "first_vs_last/Left_Frontal/Slope_first_vs_last_Left_Frontal.png"
+  "first_vs_last/Right_Frontal/Frequency_first_vs_last_Right_Frontal.png"
+  "first_vs_last/Right_Frontal/PTP_first_vs_last_Right_Frontal.png"
+  "first_vs_last/Right_Frontal/Slope_first_vs_last_Right_Frontal.png"
+  "first_vs_last/Parietal/Frequency_first_vs_last_Parietal.png"
+  "first_vs_last/Parietal/PTP_first_vs_last_Parietal.png"
+  "first_vs_last/Parietal/Slope_first_vs_last_Parietal.png"
   "overall_counts_filtered.png"
   "overall_mean_values_filtered.png"
   "region_posterior_counts_filtered.png"
@@ -73,7 +82,7 @@ case "$1" in
       --subjects "${SUBJECTS[@]}" \
       --nights "${NIGHTS[@]}" \
       --images "${IMAGES[@]}" \
-      --layouts single 1x2 3x1 2x2 2x2 2x2 \
+      --layouts single 1x2 3x1 3x3 2x2 2x2 2x2 \
       --margin "$MARGIN"
     ;;
   *)
