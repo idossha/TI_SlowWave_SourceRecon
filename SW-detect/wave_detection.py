@@ -21,7 +21,12 @@ def detect_slow_waves(raw, output_dir="output"):
     logger.info("Starting slow wave detection process.")
     
     # Define detection parameters
-    freq_sw = (0.5, 4)  # Frequency range for slow waves in Hz
+    freq_sw = (0.5, 2)  
+    dur_neg = (0.3, 1.5)
+    dur_pos = (0.1, 1)
+    amp_neg = (30, 200)
+    amp_pos = (10, 150)
+    amp_ptp = (40, 350)
     coupling = False
     verbose = False
 
@@ -30,7 +35,7 @@ def detect_slow_waves(raw, output_dir="output"):
     try:
         # Perform slow wave detection using YASA
         logger.info("Detecting slow waves using YASA's sw_detect function.")
-        sw = yasa.sw_detect(raw, freq_sw=freq_sw, verbose=verbose, coupling=coupling)
+        sw = yasa.sw_detect(raw, freq_sw=freq_sw, dur_neg=dur_neg, dur_pos=dur_pos, amp_neg=amp_neg, amp_pos=amp_pos, amp_ptp=amp_ptp, verbose=verbose, coupling=coupling)
         
         # Retrieve the summary DataFrame of detected slow waves
         sw_df = sw.summary()
