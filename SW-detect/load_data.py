@@ -22,8 +22,9 @@ def load_data(fname):
     try:
         # Load the data
         raw = mne.io.read_raw_eeglab(fname, preload=True)
+        data = raw.get_data(units="uV")        # standard practice
         logger.info(f"Successfully loaded EEG data from: {fname}")
-        return raw
+        return raw, data
     except FileNotFoundError:
         logger.error(f"File not found: {fname}")
         raise
