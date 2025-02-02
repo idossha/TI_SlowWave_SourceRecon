@@ -7,35 +7,48 @@ PROJECT_DIR="/Volumes/CSC-Ido/Analyze/"
 SUBJECTS=("101" "102" "107" "108" "109" "110" "111" "112" "114" "115" "116" "117" "119" "120" "121" "122" "127" "132")
 # SUBJECTS=("101")
 NIGHTS=("N1")
+# IMAGES=(
+#   "spectrogram.png"
+#   "stim_durations.png"
+#   "net_coverage_2D.png"
+#   "first_vs_last/Frequency_first_vs_last_hour.png"
+#   "first_vs_last/PTP_first_vs_last_hour.png"
+#   "first_vs_last/Slope_first_vs_last_hour.png"
+#   "first_vs_last/Left_Frontal/Frequency_first_vs_last_Left_Frontal.png"
+#   "first_vs_last/Left_Frontal/PTP_first_vs_last_Left_Frontal.png"
+#   "first_vs_last/Left_Frontal/Slope_first_vs_last_Left_Frontal.png"
+#   "first_vs_last/Right_Frontal/Frequency_first_vs_last_Right_Frontal.png"
+#   "first_vs_last/Right_Frontal/PTP_first_vs_last_Right_Frontal.png"
+#   "first_vs_last/Right_Frontal/Slope_first_vs_last_Right_Frontal.png"
+#   "first_vs_last/Parietal/Frequency_first_vs_last_Parietal.png"
+#   "first_vs_last/Parietal/PTP_first_vs_last_Parietal.png"
+#   "first_vs_last/Parietal/Slope_first_vs_last_Parietal.png"
+#   "overall_counts_filtered.png"
+#   "overall_mean_values_filtered.png"
+#   "region_posterior_counts_filtered.png"
+#   "region_posterior_mean_values_filtered.png"
+#   "region_R_frontal_counts_filtered.png"
+#   "region_R_frontal_mean_values_filtered.png"
+#   "region_L_frontal_counts_filtered.png"
+#   "region_L_frontal_mean_values_filtered.png"
+#   "plots_all_protocols/Frequency_vs_Start_all_protocols.png"
+#   "plots_all_protocols/Slope_vs_Start_all_protocols.png"
+#   "plots_all_protocols/PTP_vs_Start_all_protocols.png"
+#   "plots_all_protocols/PTP_vs_Slope_all_protocols.png"
+# )
+#
+#
+#
 IMAGES=(
-  "spectrogram.png"
-  "stim_durations.png"
-  "net_coverage_2D.png"
-  "first_vs_last/Frequency_first_vs_last_hour.png"
-  "first_vs_last/PTP_first_vs_last_hour.png"
-  "first_vs_last/Slope_first_vs_last_hour.png"
-  "first_vs_last/Left_Frontal/Frequency_first_vs_last_Left_Frontal.png"
-  "first_vs_last/Left_Frontal/PTP_first_vs_last_Left_Frontal.png"
-  "first_vs_last/Left_Frontal/Slope_first_vs_last_Left_Frontal.png"
-  "first_vs_last/Right_Frontal/Frequency_first_vs_last_Right_Frontal.png"
-  "first_vs_last/Right_Frontal/PTP_first_vs_last_Right_Frontal.png"
-  "first_vs_last/Right_Frontal/Slope_first_vs_last_Right_Frontal.png"
-  "first_vs_last/Parietal/Frequency_first_vs_last_Parietal.png"
-  "first_vs_last/Parietal/PTP_first_vs_last_Parietal.png"
-  "first_vs_last/Parietal/Slope_first_vs_last_Parietal.png"
-  "overall_counts_filtered.png"
-  "overall_mean_values_filtered.png"
-  "region_posterior_counts_filtered.png"
-  "region_posterior_mean_values_filtered.png"
-  "region_R_frontal_counts_filtered.png"
-  "region_R_frontal_mean_values_filtered.png"
-  "region_L_frontal_counts_filtered.png"
-  "region_L_frontal_mean_values_filtered.png"
-  "plots_all_protocols/Frequency_vs_Start_all_protocols.png"
-  "plots_all_protocols/Slope_vs_Start_all_protocols.png"
-  "plots_all_protocols/PTP_vs_Start_all_protocols.png"
-  "plots_all_protocols/PTP_vs_Slope_all_protocols.png"
-)
+
+  "first_z_wave_counts_topoplot_${SUBJECTS[@]}_N1"
+  "biggest_z_wave_counts_topoplot_${SUBJECTS[@]}_N1"
+  "all_z_wave_counts_topoplot_${SUBJECTS[@]}_N1"
+
+
+
+  )
+
 
 MARGIN=0.25
 

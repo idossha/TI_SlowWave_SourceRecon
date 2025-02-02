@@ -103,7 +103,7 @@ def collect_images(project_dir, subjects, nights, images):
 
         for night in nights:
             # Use an f-string to insert subject/night into the directory name.
-            night_path = os.path.join(subject_path, night, f"output/Strength_{subject}_{night}_forSW")
+            night_path = os.path.join(subject_path, night, f"output/")
 
             if not os.path.isdir(night_path):
                 print(f"Warning: Night directory '{night_path}' does not exist. Skipping.")
