@@ -1,213 +1,369 @@
 
-# group_topo_power.py
+#!/usr/bin/env python
 """
-Group-level script for topographic power comparison (Late - Early).
-Uses a default montage "GSN-HydroCel-257" for topomap plotting.
+Group-level script for averaging subject topomap CSV files.
+There are two file types:
+  (a) Regular topomap data with columns:
+       Channel, Q1 Power, Q4 Power, Difference (Q4 - Q1)
+  (b) FFT topomap data with columns:
+       Channel, Q1 FFT Power, Q4 FFT Power, Difference FFT (Q4 - Q1)
+A file named subject_condition.csv (located in the main directory) maps 
+subject IDs to conditions.
+The script:
+  - Recursively finds all subject power_analysis folders in a main directory.
+  - Reads subject_condition.csv to map subject ID → condition.
+  - For each subject, extracts the subject ID from the folder path (by matching a numeric token that appears in subject_condition.csv).
+  - Reads the subject CSV file (for each file type) and computes z-scores (across channels) for each metric.
+  - Within each condition group, concatenates the subject data for documentation (saving a combined CSV) and
+    then averages the subject z-scored data (using only channels that appear) for group topoplots.
+  - Uses a standard montage to create topoplots for the group average (for Q1, Q4, and the difference).
+  
+Note: If not all group channels are present in the standard montage, only the common channels are used for plotting.
 """
 
 import os
+import re
 import glob
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.stats import ttest_ind
+from scipy.stats import zscore
 import mne
 import logging
 
-##############################################################################
-# 1) PARSING / SAFETY CHECK FOR topomap_diff
-##############################################################################
-def parse_topomap_diff(val, logger=None):
-    """
-    Safely parse a 'topomap_diff' entry into a numeric NumPy array.
-    Returns an empty array if parsing fails or data is non-numeric.
-    """
-    # If it's already a list/array, convert to np.array
-    if not isinstance(val, str):
-        arr = np.array(val)
-        # Check numeric
-        if arr.dtype.kind in ["i", "f"]:
-            return arr
-        else:
-            if logger:
-                logger.warning(f"Non-numeric topomap array: {val}. Dropping.")
-            return np.array([])
-    else:
-        # It's a string like "[0.1, 0.2, ...]"
-        try:
-            arr = np.array(eval(val))
-            # Check numeric
-            if arr.dtype.kind in ["i", "f"]:
-                return arr
-            else:
-                if logger:
-                    logger.warning(f"Non-numeric topomap string: {val[:60]}... Dropping.")
-                return np.array([])
-        except Exception as e:
-            if logger:
-                logger.warning(f"Error parsing topomap string: {val[:60]}... => {e}")
-            return np.array([])
+# --- SETTINGS --- #
+# Main directory that contains subject-level output directories.
+MAIN_OUTPUT_DIR = "/Volumes/CSC-Ido/Analyze/"  # <<< CHANGE THIS to your project directory
+
+# Filenames for the two file types (choose one at a time or process both)
+CSV_FILENAME_REGULAR = "topomap_data.csv"
+CSV_FILENAME_FFT     = "topomap_data_fft.csv"
+
+# File that maps subject IDs to conditions (in the main project directory)
+SUBJECT_CONDITION_FILE = os.path.join(MAIN_OUTPUT_DIR, "subject_condition.csv")
+
+# Montage to use for plotting – adjust if necessary.
+MONTAGE_NAME = "GSN-HydroCel-257"
+
+# Fixed color scale limits for topoplots (adjust as desired)
+VMIN = -2
+VMAX = 2
 
 ##############################################################################
-# 2) LOAD & CONCAT
+# Expected column mappings for each file type.
+# For the regular file:
+COL_MAP_REGULAR = {
+    "Q1": "Q1 Power",
+    "Q4": "Q4 Power",
+    "Diff": "Difference (Q4 - Q1)"
+}
+# For the FFT file:
+COL_MAP_FFT = {
+    "Q1": "Q1 FFT Power",
+    "Q4": "Q4 FFT Power",
+    "Diff": "Difference FFT (Q4 - Q1)"
+}
+
 ##############################################################################
-def load_topo_data(power_analysis_dirs, logger=None):
+# 1) READ SUBJECT CONDITION MAPPING
+##############################################################################
+def read_subject_condition(mapping_file, logger=None):
     """
-    Loads 'topomap_data.csv' from each subject's power_analysis folder,
-    concatenates, and returns a single DataFrame. 
-    Expects columns: ["Subject", "Condition", "topomap_diff"], possibly "channel_names".
+    Reads the subject_condition.csv file and returns a dictionary mapping
+    subject ID (as a string) to condition (upper-case, stripped).
+    
+    Expected CSV format:
+         subject, condition
     """
-    all_dfs = []
-    for padir in power_analysis_dirs:
-        csv_path = os.path.join(padir, "topomap_data.csv")
+    try:
+        df = pd.read_csv(mapping_file, sep=None, engine='python')
+    except Exception as e:
+        if logger:
+            logger.error(f"Error reading {mapping_file}: {e}")
+        raise
+
+    cols = [col.lower() for col in df.columns]
+    if "subject" not in cols or "condition" not in cols:
+        msg = f"Expected columns 'subject' and 'condition' in {mapping_file}."
+        if logger:
+            logger.error(msg)
+        raise ValueError(msg)
+
+    mapping = {}
+    for _, row in df.iterrows():
+        subj = str(row["subject"]).strip()
+        cond = str(row["condition"]).strip().upper()
+        mapping[subj] = cond
+    return mapping
+
+##############################################################################
+# 2) READ AND Z-SCORE SUBJECT DATA (Generic)
+##############################################################################
+def read_and_zscore_subject(csv_path, col_map, logger=None):
+    """
+    Reads a subject's CSV file (with expected columns) into a DataFrame and computes
+    z-scores (across channels) for each metric.
+    
+    col_map is a dict mapping keys ("Q1", "Q4", "Diff") to the expected CSV column names.
+    
+    Returns a DataFrame with columns:
+      Channel, Q1, Q4, Diff
+    where the metric columns are the z-scored values.
+    """
+    try:
+        df = pd.read_csv(csv_path)
+    except Exception as e:
+        if logger:
+            logger.error(f"Error reading {csv_path}: {e}")
+        raise
+
+    expected_cols = ["Channel"] + list(col_map.values())
+    for col in expected_cols:
+        if col not in df.columns:
+            msg = f"Column '{col}' not found in {csv_path}."
+            if logger:
+                logger.error(msg)
+            raise ValueError(msg)
+    
+    # Compute z-scores for each metric (across the subject's available channels)
+    df["Q1 Z"] = zscore(df[col_map["Q1"]])
+    df["Q4 Z"] = zscore(df[col_map["Q4"]])
+    df["Diff Z"] = zscore(df[col_map["Diff"]])
+    # Rename the z-scored columns to "Q1", "Q4", and "Diff" (for subsequent processing)
+    df = df.rename(columns={"Q1 Z": "Q1", "Q4 Z": "Q4", "Diff Z": "Diff"})
+    return df[["Channel", "Q1", "Q4", "Diff"]]
+
+##############################################################################
+# 3) EXTRACT SUBJECT ID FROM PATH
+##############################################################################
+def extract_subject_id(path, valid_subjects, logger=None):
+    """
+    Searches the given path for a numeric token that is in the valid_subjects set.
+    Returns the subject ID as a string if found; otherwise, returns None.
+    """
+    nums = re.findall(r'\d+', path)
+    for num in nums:
+        if num in valid_subjects:
+            return num
+    if logger:
+        logger.warning(f"Could not extract a valid subject ID from {path}")
+    return None
+
+##############################################################################
+# 4) LOAD ALL SUBJECTS AND GROUP BY CONDITION (for a given file type)
+##############################################################################
+def load_group_subject_data(main_dir, subj_cond_map, csv_filename, col_map, logger=None):
+    """
+    Recursively finds all power_analysis folders under main_dir,
+    reads the CSV file (specified by csv_filename) from each,
+    extracts the subject ID from the folder path,
+    looks up the subject condition in subj_cond_map,
+    and returns a dictionary: { condition: [subject_df, ...], ... }.
+    
+    The CSV is read using the provided col_map.
+    """
+    group_data = {}
+    pattern = os.path.join(main_dir, "**", "power_analysis")
+    power_dirs = glob.glob(pattern, recursive=True)
+    if logger:
+        logger.info(f"Found {len(power_dirs)} power_analysis directories in {main_dir}.")
+    valid_subjects = set(subj_cond_map.keys())
+    for padir in power_dirs:
+        csv_path = os.path.join(padir, csv_filename)
         if not os.path.exists(csv_path):
             if logger:
-                logger.warning(f"No topomap_data.csv found in {padir}. Skipping.")
+                logger.warning(f"CSV file {csv_path} not found; skipping.")
+            continue
+        subj_id = extract_subject_id(padir, valid_subjects, logger=logger)
+        if subj_id is None:
+            continue
+        condition = subj_cond_map.get(subj_id)
+        if condition is None:
+            if logger:
+                logger.warning(f"Subject ID {subj_id} not found in mapping; skipping {csv_path}.")
             continue
         try:
-            df_sub = pd.read_csv(csv_path)
-            all_dfs.append(df_sub)
+            subj_df = read_and_zscore_subject(csv_path, col_map, logger=logger)
+            subj_df["Subject"] = subj_id
+            subj_df["Condition"] = condition
         except Exception as e:
             if logger:
-                logger.error(f"Error reading {csv_path}: {e}", exc_info=True)
+                logger.error(f"Error processing {csv_path}: {e}")
             continue
-    
-    if not all_dfs:
-        if logger:
-            logger.warning("No subject topo data loaded. Returning empty DataFrame.")
-        return pd.DataFrame()
-    
-    df_all = pd.concat(all_dfs, ignore_index=True)
-
-    # --- Parse 'topomap_diff' into numeric arrays & drop invalid rows ---
-    df_all["topomap_diff"] = df_all["topomap_diff"].apply(lambda x: parse_topomap_diff(x, logger=logger))
-    # Drop rows if we got an empty array or length 0
-    original_len = len(df_all)
-    df_all = df_all[df_all["topomap_diff"].apply(len) > 0].copy()
-    if logger and len(df_all) < original_len:
-        logger.info(f"Dropped {original_len - len(df_all)} rows with invalid topomap_diff data.")
-    
-    return df_all
+        group_data.setdefault(condition, []).append(subj_df)
+    return group_data
 
 ##############################################################################
-# 3) PLOT GROUP TOPO
+# 5) COMBINE SUBJECTS FOR A GROUP
 ##############################################################################
-def plot_group_topomap(df_all, raw_info, output_dir, logger=None):
+def combine_subjects(subject_dfs):
     """
-    Splits df_all by Condition (SHAM vs. ACTIVE), stacks 'topomap_diff',
-    computes t-tests at each channel, and plots group topomap difference.
+    For a list of subject DataFrames (each with columns: Channel, Q1, Q4, Diff),
+    combine them by channel.
+    
+    For each channel that appears in any subject, average the subject z-scored
+    values (using only those subjects that contain that channel).
+    
+    Returns a DataFrame with columns:
+         Channel, Q1, Q4, Diff
     """
-    # Clean up condition strings
-    df_all["Condition"] = df_all["Condition"].astype(str).str.strip()
+    combined = {}
+    for df in subject_dfs:
+        for _, row in df.iterrows():
+            ch = row["Channel"]
+            if ch not in combined:
+                combined[ch] = {"Q1": [], "Q4": [], "Diff": []}
+            combined[ch]["Q1"].append(row["Q1"])
+            combined[ch]["Q4"].append(row["Q4"])
+            combined[ch]["Diff"].append(row["Diff"])
+    avg_data = {"Channel": [], "Q1": [], "Q4": [], "Diff": []}
+    for ch, metrics in combined.items():
+        avg_data["Channel"].append(ch)
+        avg_data["Q1"].append(np.mean(metrics["Q1"]))
+        avg_data["Q4"].append(np.mean(metrics["Q4"]))
+        avg_data["Diff"].append(np.mean(metrics["Diff"]))
+    return pd.DataFrame(avg_data)
 
-    df_sham   = df_all[df_all["Condition"] == "SHAM"]
-    df_active = df_all[df_all["Condition"] == "ACTIVE"]
-
-    if df_sham.empty or df_active.empty:
+##############################################################################
+# 6) CREATE GROUP TOPOPLOTS
+##############################################################################
+def plot_group_topoplots(group_df, group_name, output_dir, logger=None):
+    """
+    Given a group-level DataFrame (with columns: Channel, Q1, Q4, Diff) and
+    an output directory, create three topoplots (for Q1, Q4, and Diff).
+    
+    This function finds the intersection between the group channels and the standard montage,
+    builds a new montage from the common channels, and then plots using that Info object.
+    A fixed color scale (vmin, vmax) is applied.
+    """
+    ch_names = group_df["Channel"].tolist()
+    
+    # Load the standard montage.
+    try:
+        montage_std = mne.channels.make_standard_montage(MONTAGE_NAME)
+    except Exception as e:
         if logger:
-            logger.warning("One or both groups are empty. Cannot do topomap comparison.")
+            logger.error(f"Error loading montage {MONTAGE_NAME}: {e}")
+        raise
+    
+    # Determine the common channels between group data and standard montage.
+    common_ch = list(set(ch_names).intersection(set(montage_std.ch_names)))
+    if not common_ch:
+        if logger:
+            logger.error("None of the group channels are present in the montage. Exiting plotting.")
+        return
+    
+    # Order channels according to the standard montage.
+    ordered_ch = [ch for ch in montage_std.ch_names if ch in common_ch]
+    
+    # Filter and order group_df accordingly.
+    group_df_subset = group_df[group_df["Channel"].isin(ordered_ch)].copy()
+    group_df_subset = group_df_subset.set_index("Channel").loc[ordered_ch].reset_index()
+    
+    # Build a channel-position dictionary from the standard montage.
+    montage_positions = montage_std.get_positions()['ch_pos']
+    ch_pos = {ch: montage_positions[ch] for ch in ordered_ch}
+    
+    # Create a new montage using the common channel positions.
+    montage_subset = mne.channels.make_dig_montage(ch_pos=ch_pos, coord_frame='head')
+    
+    # Create an Info object.
+    info = mne.create_info(ch_names=ordered_ch, sfreq=100, ch_types="eeg")
+    info.set_montage(montage_subset)
+    
+    metrics = [("Q1", "Q1 Power (z-scored)"),
+               ("Q4", "Q4 Power (z-scored)"),
+               ("Diff", "Difference (Q4 - Q1) (z-scored)")]
+    
+    for metric_key, title in metrics:
+        data = group_df_subset[metric_key].values
+        fig, ax = plt.subplots(figsize=(6, 5))
+        im, _ = mne.viz.plot_topomap(data, info, axes=ax, show=False, vlim=(VMIN,VMAX))
+        ax.set_title(f"{group_name} Group - {title}")
+        cbar = fig.colorbar(im, ax=ax)
+        cbar.set_ticks(np.linspace(VMIN, VMAX, 5))
+        out_fname = os.path.join(output_dir, f"{group_name}_{metric_key}_topomap.png")
+        fig.tight_layout()
+        fig.savefig(out_fname)
+        plt.close(fig)
+        if logger:
+            logger.info(f"Saved {out_fname}")
+
+##############################################################################
+# 7) SAVE CONCATENATED SUBJECT CSV FOR DOCUMENTATION
+##############################################################################
+def save_concatenated_csv(group_data, output_dir, file_suffix, logger=None):
+    """
+    For each condition (group) in group_data (a dict with lists of subject DataFrames),
+    concatenate the subject DataFrames into one DataFrame (adding subject and condition columns)
+    and save it as a CSV file in output_dir. The filename will include file_suffix.
+    """
+    for condition, subj_dfs in group_data.items():
+        if not subj_dfs:
+            continue
+        concat_df = pd.concat(subj_dfs, ignore_index=True)
+        out_fname = os.path.join(output_dir, f"{condition}_concatenated_{file_suffix}.csv")
+        concat_df.to_csv(out_fname, index=False)
+        if logger:
+            logger.info(f"Saved concatenated CSV for {condition} to {out_fname}")
+
+##############################################################################
+# 8) MAIN PROCESSING FUNCTION FOR A GIVEN FILE TYPE
+##############################################################################
+def process_file_type(main_dir, csv_filename, col_map, file_suffix, logger=None):
+    """
+    Processes one type of CSV file (specified by csv_filename and col_map) by:
+      - Loading subject data and grouping by condition.
+      - Saving concatenated subject CSVs for documentation.
+      - Combining subject data within each group.
+      - Plotting group-level topoplots.
+    """
+    subj_cond_map = read_subject_condition(SUBJECT_CONDITION_FILE, logger=logger)
+    logger.info(f"Loaded subject condition mapping for {len(subj_cond_map)} subjects.")
+    group_data = load_group_subject_data(main_dir, subj_cond_map, csv_filename, col_map, logger=logger)
+    if not group_data:
+        logger.error("No subject data loaded. Exiting processing for file type.")
         return
 
-    # Now topomap_diff are guaranteed numeric arrays
-    sham_topos   = np.vstack(df_sham["topomap_diff"].values)   # shape (n_sham, n_channels)
-    active_topos = np.vstack(df_active["topomap_diff"].values) # shape (n_active, n_channels)
-
-    mean_sham   = sham_topos.mean(axis=0)
-    mean_active = active_topos.mean(axis=0)
-    diff_groups = mean_active - mean_sham
-
-    tvals, pvals = ttest_ind(active_topos, sham_topos, axis=0, equal_var=False)
-    alpha = 0.05
-    n_ch = len(diff_groups)
-    pvals_corrected = pvals * n_ch
-    sig_channels = pvals_corrected < alpha
-
-    fig, axes = plt.subplots(1, 3, figsize=(14, 5))
-
-    # 1) SHAM
-    im0, _ = mne.viz.plot_topomap(
-        mean_sham, raw_info, axes=axes[0], show=False, contours=0
-    )
-    axes[0].set_title("SHAM (mean Late-Early)")
-    cbar0 = plt.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
-    cbar0.set_label("Power (uV²/Hz)")
-
-    # 2) ACTIVE
-    im1, _ = mne.viz.plot_topomap(
-        mean_active, raw_info, axes=axes[1], show=False, contours=0
-    )
-    axes[1].set_title("ACTIVE (mean Late-Early)")
-    cbar1 = plt.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)
-    cbar1.set_label("Power (uV²/Hz)")
-
-    # 3) DIFF (ACTIVE - SHAM) with significant channels
-    im2, _ = mne.viz.plot_topomap(
-        diff_groups, raw_info, axes=axes[2], show=False, contours=0,
-        mask=sig_channels,
-        mask_params=dict(marker='o', markerfacecolor='white', markeredgecolor='black', linewidth=2)
-    )
-    axes[2].set_title("ACTIVE - SHAM\n(sig chans highlighted)")
-    cbar2 = plt.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)
-    cbar2.set_label("Power (uV²/Hz)")
-
-    fig.suptitle("Group Topomap Comparison (Late-Early PSD)")
-    fig.tight_layout()
-
-    fname = os.path.join(output_dir, "group_topomap_comparison.png")
-    fig.savefig(fname)
-    plt.close(fig)
-    if logger:
-        logger.info(f"Saved group topomap comparison to {fname}")
+    # Create an output directory for group plots for this file type.
+    group_out_dir = os.path.join(main_dir, f"group_topoplots_{file_suffix}")
+    os.makedirs(group_out_dir, exist_ok=True)
+    
+    # Save concatenated CSVs for documentation.
+    save_concatenated_csv(group_data, group_out_dir, file_suffix, logger=logger)
+    
+    # For each group, combine subject data and plot.
+    for condition, subj_dfs in group_data.items():
+        logger.info(f"Group {condition}: {len(subj_dfs)} subject files found.")
+        combined_df = combine_subjects(subj_dfs)
+        logger.info(f"Group {condition}: Combined data has {len(combined_df)} channels.")
+        plot_group_topoplots(combined_df, condition, group_out_dir, logger=logger)
 
 ##############################################################################
-# 4) MAIN GROUP TOPO FUNCTION
+# 9) MAIN
 ##############################################################################
-def group_topo_power(main_output_dir):
-    """
-    1) Finds all subject-level power_analysis directories
-    2) Loads 'topomap_data.csv' from each subject
-    3) Uses a default montage 'GSN-HydroCel-257' for topomap
-    4) Plots group-level difference with significant channels marked
-    """
+def main(main_output_dir):
+    logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-
     if not os.path.exists(main_output_dir):
-        os.makedirs(main_output_dir, exist_ok=True)
-
-    pattern = os.path.join(main_output_dir, "**", "power_analysis")
-    power_analysis_dirs = glob.glob(pattern, recursive=True)
-
-    if not power_analysis_dirs:
-        logger.warning("No power_analysis directories found. Exiting.")
+        logger.error(f"Main output directory {main_output_dir} does not exist. Exiting.")
         return
 
-    # 1) Load all subject topomap data (and parse 'topomap_diff')
-    df_all = load_topo_data(power_analysis_dirs, logger=logger)
-    if df_all.empty:
-        logger.warning("No topomap data loaded after parsing. Exiting.")
-        return
-
-    # 2) Create a dummy Info with the GSN-HydroCel-257 montage
-    montage_name = "GSN-HydroCel-256"
-    montage = mne.channels.make_standard_montage(montage_name)
+    # Process the regular topomap data
+    logger.info("Processing regular topomap data...")
+    process_file_type(main_output_dir, CSV_FILENAME_REGULAR, COL_MAP_REGULAR, "regular", logger=logger)
     
-    n_channels = len(montage.ch_names)
-    info = mne.create_info(ch_names=montage.ch_names, sfreq=250, ch_types="eeg")
-    info.set_montage(montage)
+    # Process the FFT topomap data
+    logger.info("Processing FFT topomap data...")
+    process_file_type(main_output_dir, CSV_FILENAME_FFT, COL_MAP_FFT, "fft", logger=logger)
+    
+    logger.info("Group topoplot processing complete.")
 
-    # 3) Plot group-level topomap
-    plot_group_topomap(df_all, info, main_output_dir, logger=logger)
-
-    logger.info("Group-level topomap comparison complete.")
-
-
-# Optional CLI usage:
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:
         main_output_dir = sys.argv[1]
     else:
-        main_output_dir = "/path/to/project"
-    group_topo_power(main_output_dir)
+        main_output_dir = MAIN_OUTPUT_DIR
+    main(main_output_dir)
 
