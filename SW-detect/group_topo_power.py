@@ -2,23 +2,11 @@
 #!/usr/bin/env python
 """
 Group-level script for averaging subject topomap CSV files.
-There are two file types:
-  (a) Regular topomap data with columns:
-       Channel, Q1 Power, Q4 Power, Difference (Q4 - Q1)
-  (b) FFT topomap data with columns:
-       Channel, Q1 FFT Power, Q4 FFT Power, Difference FFT (Q4 - Q1)
-A file named subject_condition.csv (located in the main directory) maps 
-subject IDs to conditions.
-The script:
-  - Recursively finds all subject power_analysis folders in a main directory.
-  - Reads subject_condition.csv to map subject ID → condition.
-  - For each subject, extracts the subject ID from the folder path (by matching a numeric token that appears in subject_condition.csv).
-  - Reads the subject CSV file (for each file type) and computes z-scores (across channels) for each metric.
-  - Within each condition group, concatenates the subject data for documentation (saving a combined CSV) and
-    then averages the subject z-scored data (using only channels that appear) for group topoplots.
-  - Uses a standard montage to create topoplots for the group average (for Q1, Q4, and the difference).
-  
-Note: If not all group channels are present in the standard montage, only the common channels are used for plotting.
+
+Modifications:
+1) Adds a global list of channels (EXCLUDE_CHANNELS) that you do NOT want to plot.
+2) Uses an EEGLAB-like layout for topoplots by computing the head sphere
+   origin and radius from four reference channels (Oz=E126, Fpz=E26, T7=E69, T8=E202).
 """
 
 import os
@@ -33,21 +21,38 @@ import logging
 
 # --- SETTINGS --- #
 # Main directory that contains subject-level output directories.
-MAIN_OUTPUT_DIR = "/Volumes/CSC-Ido/Analyze/"  # <<< CHANGE THIS to your project directory
+MAIN_OUTPUT_DIR = "/Volumes/Ido/analyze/"  # <<< CHANGE THIS to your project directory
 
 # Filenames for the two file types (choose one at a time or process both)
-CSV_FILENAME_REGULAR = "topomap_data.csv"
-CSV_FILENAME_FFT     = "topomap_data_fft.csv"
+CSV_FILENAME_REGULAR = "topomap_data_poststim_0.85-1.15_welch.csv"
+CSV_FILENAME_FFT     = "topomap_data_poststim_0.85-1.15_fft.csv"
 
 # File that maps subject IDs to conditions (in the main project directory)
 SUBJECT_CONDITION_FILE = os.path.join(MAIN_OUTPUT_DIR, "subject_condition.csv")
 
-# Montage to use for plotting – adjust if necessary.
-MONTAGE_NAME = "GSN-HydroCel-257"
+# Montage to use for plotting
+MONTAGE_NAME = "GSN-HydroCel-256"
 
 # Fixed color scale limits for topoplots (adjust as desired)
 VMIN = -2
 VMAX = 2
+
+# ------------------------------
+# NEW: Channels to exclude
+# (Will be dropped before plotting)
+# Example: EXCLUDE_CHANNELS = ["E1", "E2", "E3"]
+# ------------------------------
+
+EXCLUDE_CHANNELS = [
+    "E67", "E73", "E82", "E91", "E92", "E93", "E102", "E103", "E104", "E111", "E112", "E113",
+    "E120", "E121", "E122", "E133", "E134", "E135", "E145", "E146", "E147", "E156", "E157",
+    "E165", "E166", "E167", "E174", "E175", "E176", "E187", "E188", "E189", "E190", "E199",
+    "E200", "E201", "E208", "E209", "E216", "E217", "E218", "E219", "E225", "E226", "E227", "E228",
+    "E229", "E230", "E231","E232", "E233", "E234", "E235", "E236", "E237", "E238", "E239", "E240",
+    "E241", "E242", "E243", "E244", "E245","E246", "E247", "E248", "E249", "E250", "E251", "E252",
+    "E253", "E254", "E255", "E256"
+]
+
 
 ##############################################################################
 # Expected column mappings for each file type.
@@ -55,13 +60,13 @@ VMAX = 2
 COL_MAP_REGULAR = {
     "Q1": "Q1 Power",
     "Q4": "Q4 Power",
-    "Diff": "Difference (Q4 - Q1)"
+    "Diff": "Difference"
 }
 # For the FFT file:
 COL_MAP_FFT = {
-    "Q1": "Q1 FFT Power",
-    "Q4": "Q4 FFT Power",
-    "Diff": "Difference FFT (Q4 - Q1)"
+    "Q1": "Q1 Power",
+    "Q4": "Q4 Power",
+    "Diff": "Difference"
 }
 
 ##############################################################################
@@ -225,71 +230,93 @@ def combine_subjects(subject_dfs):
     return pd.DataFrame(avg_data)
 
 ##############################################################################
-# 6) CREATE GROUP TOPOPLOTS
+# 6) CREATE GROUP TOPOPLOTS (EEGLAB STYLE)
 ##############################################################################
+
+
 def plot_group_topoplots(group_df, group_name, output_dir, logger=None):
     """
-    Given a group-level DataFrame (with columns: Channel, Q1, Q4, Diff) and
-    an output directory, create three topoplots (for Q1, Q4, and Diff).
-    
-    This function finds the intersection between the group channels and the standard montage,
-    builds a new montage from the common channels, and then plots using that Info object.
-    A fixed color scale (vmin, vmax) is applied.
+    Plots group-level topomaps (Q1, Q4, Diff) using MNE's default layout.
+    Excludes any channels in EXCLUDE_CHANNELS from the final plot.
+    Attempts to display sensor names by passing 'names=...' to plot_topomap().
+
+    Steps:
+      1) Load the standard GSN-HydroCel-256 montage.
+      2) Subset the DataFrame channels to exclude those in EXCLUDE_CHANNELS
+         and ensure they exist in the montage.
+      3) Order channels according to the montage order.
+      4) Create a new Info object and set the subset montage.
+      5) Plot topomaps for Q1, Q4, and Diff using MNE's defaults,
+         passing 'names=...' and 'sensors=True' to label sensors.
     """
-    ch_names = group_df["Channel"].tolist()
-    
-    # Load the standard montage.
+    # Color scale limits (adjust as needed)
+    VMIN, VMAX = -2, 2
+
+    # 1) Load the standard montage
     try:
-        montage_std = mne.channels.make_standard_montage(MONTAGE_NAME)
+        montage_std = mne.channels.make_standard_montage("GSN-HydroCel-256")
     except Exception as e:
         if logger:
-            logger.error(f"Error loading montage {MONTAGE_NAME}: {e}")
-        raise
-    
-    # Determine the common channels between group data and standard montage.
-    common_ch = list(set(ch_names).intersection(set(montage_std.ch_names)))
+            logger.error(f"Error loading montage GSN-HydroCel-256: {e}")
+        return
+
+    # 2) Filter out excluded channels and those not in the montage
+    df_channels = group_df["Channel"].tolist()
+    valid_ch = set(montage_std.ch_names)
+    common_ch = list(set(df_channels).intersection(valid_ch) - set(EXCLUDE_CHANNELS))
+
     if not common_ch:
         if logger:
-            logger.error("None of the group channels are present in the montage. Exiting plotting.")
+            logger.error("No valid channels left after exclusions and montage intersection.")
         return
-    
-    # Order channels according to the standard montage.
+
+    # 3) Preserve montage order
     ordered_ch = [ch for ch in montage_std.ch_names if ch in common_ch]
-    
-    # Filter and order group_df accordingly.
+
+    # Subset the group DataFrame to those channels only, in that order
     group_df_subset = group_df[group_df["Channel"].isin(ordered_ch)].copy()
     group_df_subset = group_df_subset.set_index("Channel").loc[ordered_ch].reset_index()
-    
-    # Build a channel-position dictionary from the standard montage.
+
+    # 4) Create an Info object with subset montage
     montage_positions = montage_std.get_positions()['ch_pos']
     ch_pos = {ch: montage_positions[ch] for ch in ordered_ch}
-    
-    # Create a new montage using the common channel positions.
     montage_subset = mne.channels.make_dig_montage(ch_pos=ch_pos, coord_frame='head')
-    
-    # Create an Info object.
+
     info = mne.create_info(ch_names=ordered_ch, sfreq=100, ch_types="eeg")
     info.set_montage(montage_subset)
-    
-    metrics = [("Q1", "Q1 Power (z-scored)"),
-               ("Q4", "Q4 Power (z-scored)"),
-               ("Diff", "Difference (Q4 - Q1) (z-scored)")]
-    
+
+    # 5) Plot topomaps for Q1, Q4, and Diff (try labeling channels)
+    metrics = [
+        ("Q1",   "Q1 Power (z-scored)"),
+        ("Q4",   "Q4 Power (z-scored)"),
+        ("Diff", "Difference (Q4 - Q1) (z-scored)")
+    ]
     for metric_key, title in metrics:
         data = group_df_subset[metric_key].values
+
         fig, ax = plt.subplots(figsize=(6, 5))
-        im, _ = mne.viz.plot_topomap(data, info, axes=ax, show=False, vlim=(VMIN,VMAX))
+        # Note: older MNE versions do NOT have "show_names". Instead,
+        # we pass 'names=ordered_ch' and 'sensors=True' to label them.
+        im, _ = mne.viz.plot_topomap(
+            data, info,
+            axes=ax,
+            show=False,
+            vlim=(VMIN, VMAX),
+            sensors=True,        # Show sensor location markers
+            names=ordered_ch     # Provide channel names in the same order
+        )
         ax.set_title(f"{group_name} Group - {title}")
+
         cbar = fig.colorbar(im, ax=ax)
         cbar.set_ticks(np.linspace(VMIN, VMAX, 5))
+
         out_fname = os.path.join(output_dir, f"{group_name}_{metric_key}_topomap.png")
         fig.tight_layout()
         fig.savefig(out_fname)
         plt.close(fig)
+
         if logger:
             logger.info(f"Saved {out_fname}")
-
-##############################################################################
 # 7) SAVE CONCATENATED SUBJECT CSV FOR DOCUMENTATION
 ##############################################################################
 def save_concatenated_csv(group_data, output_dir, file_suffix, logger=None):
@@ -316,7 +343,7 @@ def process_file_type(main_dir, csv_filename, col_map, file_suffix, logger=None)
       - Loading subject data and grouping by condition.
       - Saving concatenated subject CSVs for documentation.
       - Combining subject data within each group.
-      - Plotting group-level topoplots.
+      - Plotting group-level topoplots (EEGLAB-style).
     """
     subj_cond_map = read_subject_condition(SUBJECT_CONDITION_FILE, logger=logger)
     logger.info(f"Loaded subject condition mapping for {len(subj_cond_map)} subjects.")
@@ -358,6 +385,7 @@ def main(main_output_dir):
     process_file_type(main_output_dir, CSV_FILENAME_FFT, COL_MAP_FFT, "fft", logger=logger)
     
     logger.info("Group topoplot processing complete.")
+
 
 if __name__ == "__main__":
     import sys
