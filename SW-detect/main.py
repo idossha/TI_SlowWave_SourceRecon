@@ -9,6 +9,7 @@ import pandas as pd
 
 from interactive_prompt import get_user_choices
 
+
 def setup_logging(output_dir):
     """
     Set up logging to both console and a log file in the output directory.
@@ -112,12 +113,10 @@ def main():
 
     # -------------------------------------------------------------------------
     # LOAD SUBJECT CONDITION CSV (subject_condition.csv) WITH COLUMNS: subject, condition
-    # Make sure the 'subject' column matches the naming convention in subject_dir_name
-    # e.g. if subject_dir_name = "101", then 'subject' should be 101 (int) or "101" (str).
+    # Make sure the 'subject' column matches the naming convention in subject_dir_name.
     # -------------------------------------------------------------------------
     conditions_df = pd.read_csv(os.path.join(project_dir, "subject_condition.csv"))
     conditions_df["subject"] = conditions_df["subject"].astype(str)
-
 
     # 2) Loop over the (subject, night, file) tuples
     for subject_dir_name, night_dir_name, set_filepath in get_all_filepaths(
@@ -143,8 +142,6 @@ def main():
         try:
             # Determine subject_id and condition from CSV
             subject_id = subject_dir_name  # e.g. "101" or "sub-101"
-            # Attempt to find the row matching this subject
-            # If your CSV has subject as an integer, you might need int(subject_dir_name)
             row_matches = conditions_df[conditions_df["subject"] == subject_id]
             if len(row_matches) == 0:
                 subject_condition = "UNKNOWN"
@@ -175,12 +172,13 @@ def main():
                 plot_parameter_time
             )
 
-            # Import your new power analysis functions from power_analysis.py
+            # Import new power analysis functions from power_analysis.py
             from power_analysis import (
                 split_stim_epochs,
                 analyze_protocols,
                 plot_average_psd,
-                plot_topomaps
+                plot_topomaps,
+                get_quarters
             )
 
             # 4) Load the data
@@ -204,48 +202,41 @@ def main():
             cleaned_events_df, durations, omitted_events_df = clean_events(raw)
 
             # --------------------------------------------------
-            # POWER ANALYSIS (NEW BLOCK)
+            # POWER ANALYSIS
             # --------------------------------------------------
-            logger.info("STEP 8.5) Running power analysis (Q1 vs Q4)...")
-            # Split the stimulation epochs into pre-stim, Q1, Q4, and post-stim parts.
-            pre_stim_epochs, q1_stim_epochs, q4_stim_epochs, post_stim_epochs = split_stim_epochs(raw, logger=logger)
-            # Analyze each protocol's power and permutation entropy differences (Q1 vs Q4)
-            analyze_protocols(
-                raw,
-                pre_stim_epochs,
-                q1_stim_epochs,
-                q4_stim_epochs,
-                post_stim_epochs,
-                output_dir,
-                subject_id=subject_id,
-                condition=subject_condition,
-                logger=logger
-            )
-            # Plot the average PSD across protocols.
-            plot_average_psd(
-                raw,
-                pre_stim_epochs,
-                q1_stim_epochs,
-                q4_stim_epochs,
-                post_stim_epochs,
-                output_dir,
-                subject_id=subject_id,
-                condition=subject_condition,
-                logger=logger
-            )
-            # Plot topomaps for Q1 and Q4 (with the same color scale and sensor names).
-            plot_topomaps(
-                raw,
-                pre_stim_epochs,
-                q1_stim_epochs,
-                q4_stim_epochs,
-                post_stim_epochs,
-                output_dir,
-                logger=logger
-            )
 
-            # 10) Create epochs and adjust overlaps
-            logger.info("STEP 10) Creating epochs and adjusting overlaps...")
+            logger.info("STEP 8.5) Running power analysis (PSD comparisons)...")
+            pre_stim_epochs, q1_stim_epochs, q4_stim_epochs, post_stim_epochs = split_stim_epochs(raw, logger=logger)
+            # Run protocol-by-protocol analysis (this function creates PSD plots per protocol and saves CSV stats)
+            analyze_protocols(raw, pre_stim_epochs, q1_stim_epochs, q4_stim_epochs,
+                              post_stim_epochs, output_dir, subject_id, subject_condition, logger)
+            # Average PSD plots:
+            # For stim epochs (difference = Q4 - Q1)
+            plot_average_psd(raw, q1_stim_epochs, q4_stim_epochs, output_dir,
+                             subject_id, subject_condition, epoch_type="stim", logger=logger)
+            # For poststim epochs (difference = Q1 - Q4) – first, split each post-stim epoch:
+            q1_post_epochs, q4_post_epochs = [], []
+            for post_epoch in post_stim_epochs:
+                q1_post, q4_post = get_quarters(post_epoch)
+                q1_post_epochs.append(q1_post)
+                q4_post_epochs.append(q4_post)
+            plot_average_psd(raw, q1_post_epochs, q4_post_epochs, output_dir,
+                             subject_id, subject_condition, epoch_type="poststim", logger=logger)
+            # Topoplots:
+            # For stim epochs:
+            plot_topomaps(raw, q1_stim_epochs, q4_stim_epochs, output_dir,
+                          epoch_type="stim", method="welch", logger=logger)
+            plot_topomaps(raw, q1_stim_epochs, q4_stim_epochs, output_dir,
+                          epoch_type="stim", method="fft", logger=logger)
+            # For poststim epochs:
+            plot_topomaps(raw, q1_post_epochs, q4_post_epochs, output_dir,
+                          epoch_type="poststim", method="welch", logger=logger)
+            plot_topomaps(raw, q1_post_epochs, q4_post_epochs, output_dir,
+                          epoch_type="poststim", method="fft", logger=logger)
+
+
+
+
             pre_stim_epochs_old, stim_epochs, post_stim_epochs_old, overlaps = create_and_visualize_epochs(
                 cleaned_events_df, output_dir, sf
             )
@@ -334,23 +325,20 @@ def main():
                 set_filename, subject_dir_name, night_dir_name, e,
                 exc_info=True  # Stack trace in the log
             )
-            # Optionally continue to next file
             continue
 
     # -------------------------------------------------------------------------
-    # AFTER PROCESSING ALL SUBJECTS, YOU MAY CALL THE GROUP COMPARISON FUNCTION
-    # (IF YOU WANT IT TO RUN AUTOMATICALLY NOW):
+    # AFTER PROCESSING ALL SUBJECTS, YOU MAY CALL THE GROUP COMPARISON FUNCTION:
     # -------------------------------------------------------------------------
     logger = logging.getLogger(__name__)
     logger.info("All subjects processed. Running group-level PSD and topomap comparisons...")
 
     from group_PSD import group_power_psd
 
-    # Pass your entire project directory as the 'main_output_dir'
-    # This directory should contain all subject folders with their "power_analysis" subfolders.
     group_power_psd(project_dir)
 
     logger.info("Group-level PSD and topomap comparisons are complete.")
+
 
 if __name__ == '__main__':
     main()
