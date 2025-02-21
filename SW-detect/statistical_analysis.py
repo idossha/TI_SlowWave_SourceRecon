@@ -36,6 +36,12 @@ def perform_statistical_analysis(df_filtered, output_dir, project_dir, subject, 
     - night: str, night identifier.
     - suffix: str, additional suffix to differentiate output files.
     """
+ 
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    wave_description_dir = os.path.join(output_dir, 'wave_description')
+    os.makedirs(wave_description_dir, exist_ok=True)
 
     # Columns of interest for mean-value plots
     columns_to_plot = ['Duration', 'ValNegPeak', 'ValPosPeak', 'PTP', 'Frequency']
@@ -70,7 +76,7 @@ def perform_statistical_analysis(df_filtered, output_dir, project_dir, subject, 
     plt.legend(title='Properties', loc='upper right', bbox_to_anchor=(1.15, 1))
     add_value_labels(ax)
     plt.tight_layout()
-    overall_mean_png = os.path.join(output_dir, f'overall_mean_values_{suffix}.png')
+    overall_mean_png = os.path.join(wave_description_dir, f'overall_mean_values_{suffix}.png')
     plt.savefig(overall_mean_png)
     plt.close()
 
@@ -83,7 +89,7 @@ def perform_statistical_analysis(df_filtered, output_dir, project_dir, subject, 
     plt.xticks(rotation=0)
     add_value_labels(ax2)
     plt.tight_layout()
-    overall_counts_png = os.path.join(output_dir, f'overall_counts_{suffix}.png')
+    overall_counts_png = os.path.join(wave_description_dir, f'overall_counts_{suffix}.png')
     plt.savefig(overall_counts_png)
     plt.close()
 
@@ -115,7 +121,7 @@ def perform_statistical_analysis(df_filtered, output_dir, project_dir, subject, 
         plt.legend(title='Properties', loc='upper right', bbox_to_anchor=(1.15, 1))
         add_value_labels(ax)
         plt.tight_layout()
-        protocol_mean_png = os.path.join(output_dir, f'protocol_{int(protocol)}_mean_values_{suffix}.png')
+        protocol_mean_png = os.path.join(wave_description_dir, f'protocol_{int(protocol)}_mean_values_{suffix}.png')
         plt.savefig(protocol_mean_png)
         plt.close()
 
@@ -128,7 +134,7 @@ def perform_statistical_analysis(df_filtered, output_dir, project_dir, subject, 
         plt.xticks(rotation=0)
         add_value_labels(ax2)
         plt.tight_layout()
-        protocol_counts_png = os.path.join(output_dir, f'protocol_{int(protocol)}_counts_{suffix}.png')
+        protocol_counts_png = os.path.join(wave_description_dir, f'protocol_{int(protocol)}_counts_{suffix}.png')
         plt.savefig(protocol_counts_png)
         plt.close()
 
@@ -258,7 +264,7 @@ def perform_statistical_analysis(df_filtered, output_dir, project_dir, subject, 
         plt.legend(title='Properties', loc='upper right', bbox_to_anchor=(1.15, 1))
         add_value_labels(ax_region_means)
         plt.tight_layout()
-        region_mean_png = os.path.join(output_dir, f'region_{region}_mean_values_{suffix}.png')
+        region_mean_png = os.path.join(wave_description_dir, f'region_{region}_mean_values_{suffix}.png')
         plt.savefig(region_mean_png)
         plt.close()
 
@@ -271,7 +277,7 @@ def perform_statistical_analysis(df_filtered, output_dir, project_dir, subject, 
         plt.xticks(rotation=0)
         add_value_labels(ax_region_counts)
         plt.tight_layout()
-        region_counts_png = os.path.join(output_dir, f'region_{region}_counts_{suffix}.png')
+        region_counts_png = os.path.join(wave_description_dir, f'region_{region}_counts_{suffix}.png')
         plt.savefig(region_counts_png)
         plt.close()
 
@@ -305,7 +311,7 @@ def perform_statistical_analysis(df_filtered, output_dir, project_dir, subject, 
             add_value_labels(ax_rp_means)
             plt.tight_layout()
             rp_means_png = os.path.join(
-                output_dir,
+                wave_description_dir, 
                 f'region_{region}_protocol_{int(protocol)}_mean_values_{suffix}.png'
             )
             plt.savefig(rp_means_png)
@@ -321,7 +327,7 @@ def perform_statistical_analysis(df_filtered, output_dir, project_dir, subject, 
             add_value_labels(ax_rp_counts)
             plt.tight_layout()
             rp_counts_png = os.path.join(
-                output_dir,
+                wave_description_dir, 
                 f'region_{region}_protocol_{int(protocol)}_counts_{suffix}.png'
             )
             plt.savefig(rp_counts_png)
