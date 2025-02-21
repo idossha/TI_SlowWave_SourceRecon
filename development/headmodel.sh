@@ -60,7 +60,6 @@ if [[ -z "$PROJECT_DIR" ]]; then
 fi
 
 # If --quiet is set, redirect all output (stdout and stderr) to /dev/null
-# If you want to keep errors visible but hide normal output, use: exec 1>/dev/null
 if $QUIET; then
   exec &>/dev/null
 fi
@@ -98,9 +97,10 @@ fi
 DICOM_DIR="${PROJECT_DIR}/dicoms"
 MRI_DIR="${PROJECT_DIR}/MRIs"
 HEAD_MODEL_DIR="${PROJECT_DIR}/head_models"
+FS_RECON_DIR="${PROJECT_DIR}/fs_recon"   # New directory for FreeSurfer output
 
 # Create output directories if they don't exist
-mkdir -p "$MRI_DIR" "$HEAD_MODEL_DIR"
+mkdir -p "$MRI_DIR" "$HEAD_MODEL_DIR" "$FS_RECON_DIR"
 
 ###############################################################################
 #                         DEFINE PROCESSING FUNCTION
@@ -159,9 +159,9 @@ process_subject() {
     fi
   done
 
-  # --- Identify T1 and T2 images ---
-  T1_file="${subj_mri_dir}/T1.nii"
-  T2_file="${subj_mri_dir}/T2.nii"
+  # --- Identify T1 and T2 images using absolute paths ---
+  T1_file=$(realpath "${subj_mri_dir}/T1.nii" 2>/dev/null)
+  T2_file=$(realpath "${subj_mri_dir}/T2.nii" 2>/dev/null)
 
   if [ ! -f "$T1_file" ]; then
     echo "  [$subject] Error: T1.nii not found."
@@ -180,7 +180,7 @@ process_subject() {
   # --- Optionally run FreeSurfer recon-all ---
   if $RUN_RECON; then
     echo "  [$subject] Running FreeSurfer recon-all..."
-    recon-all -subject "$subject" -i "$T1_file" -all
+    recon-all -subject "$subject" -i "$T1_file" -all -sd "$FS_RECON_DIR"
   fi
 
   echo "Finished processing subject: $subject"
@@ -190,6 +190,7 @@ process_subject() {
 export -f process_subject
 export MRI_DIR
 export HEAD_MODEL_DIR
+export FS_RECON_DIR
 export RUN_RECON
 
 ###############################################################################
