@@ -41,7 +41,7 @@ def load_and_concatenate_subject_data(power_analysis_dirs, logger=None):
     """Loads PSD data from each subject and concatenates into a single DataFrame."""
     all_dfs = []
     for padir in power_analysis_dirs:
-        csv_path = os.path.join(padir, "psd_data.csv")
+        csv_path = os.path.join(padir, "psd_data_stim.csv")
         if not os.path.exists(csv_path):
             if logger:
                 logger.warning(f"No PSD CSV found in {padir}. Skipping.")

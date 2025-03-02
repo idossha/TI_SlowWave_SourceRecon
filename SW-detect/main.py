@@ -180,6 +180,12 @@ def main():
                 plot_topomaps,
                 get_quarters
             )
+            from periodic_power_analysis import (
+                    split_stim_epochs, analyze_protocols_irasa, 
+                    plot_average_irasa_components, plot_irasa_topomaps
+                    )
+
+            from wavelet_power_analysis import split_stim_epochs, plot_protocol_wavelet_power, compute_average_trend_slopes
 
             # 4) Load the data
             logger.info("STEP 4) Loading data...")
@@ -193,13 +199,22 @@ def main():
             logger.info("STEP 6) Plotting spectrogram...")
             plot_spectrogram_with_annotations(raw, output_dir)
 
-            # 7) Filter and resample the data
-            logger.info("STEP 7) Filtering and resampling data...")
-            raw, sf, filter_details = filter_and_resample(raw)
-
-            # 8) Clean events
-            logger.info("STEP 8) Cleaning events...")
-            cleaned_events_df, durations, omitted_events_df = clean_events(raw)
+            # --------------------------------------------------
+            # Morlet POWER ANALYSIS
+            # --------------------------------------------------
+            #
+            # # Create the subdirectory for time-domain power outputs.
+            # time_power_dir = os.path.join(output_dir, "time_domain_power")
+            # os.makedirs(time_power_dir, exist_ok=True)
+            #
+            # pre_stim_epochs, q1_stim_epochs, q4_stim_epochs, post_stim_epochs = split_stim_epochs(raw, logger=logger)
+            #
+            # protocol_slopes = []
+            # for pre_ep, q1_ep, q4_ep, post_ep in zip(pre_stim_epochs, q1_stim_epochs, q4_stim_epochs, post_stim_epochs):
+            #     _, _, _, slopes = plot_protocol_wavelet_power(raw, pre_ep, post_ep, q1_ep, q4_ep, time_power_dir, pre_ep[2], logger=logger)
+            #     protocol_slopes.append(slopes)
+            #
+            # compute_average_trend_slopes(protocol_slopes, time_power_dir, logger=logger)
 
             # --------------------------------------------------
             # POWER ANALYSIS
@@ -234,6 +249,18 @@ def main():
             plot_topomaps(raw, q1_post_epochs, q4_post_epochs, output_dir,
                           epoch_type="poststim", method="fft", logger=logger)
 
+
+            # 12) Analyze IRASA for periodic and aperiodic components
+            pre_stim_epochs, q1_stim_epochs, q4_stim_epochs, post_stim_epochs = split_stim_epochs(raw, logger=logger)
+            analyze_protocols_irasa(raw, q1_stim_epochs, q4_stim_epochs, post_stim_epochs, output_dir, logger=logger)
+
+            # 13) Compute and plot average IRASA components across protocols (for stimulation epochs)
+            plot_average_irasa_components(raw, q1_stim_epochs, q4_stim_epochs, output_dir, epoch_type="stim", logger=logger)
+            plot_average_irasa_components(raw, q1_stim_epochs, q4_stim_epochs, output_dir, epoch_type="poststim", logger=logger)
+
+            # 14) Generate topoplots for the IRASA components across defined entrainment bands (for stimulation epochs)
+            plot_irasa_topomaps(raw, q1_stim_epochs, q4_stim_epochs, output_dir, epoch_type="stim", logger=logger)
+            plot_irasa_topomaps(raw, q1_stim_epochs, q4_stim_epochs, output_dir, epoch_type="poststim", logger=logger)
 
 
 
