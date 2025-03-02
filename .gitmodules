@@ -4,3 +4,6 @@
 [submodule "Docker/TI-CSC_loader"]
 	path = Docker/TI-CSC_loader
 	url = https://github.com/idossha/TI-CSC_loader
+[submodule "fast_ICA"]
+	path = fast_ICA
+	url = https://github.com/idossha/fast_ICA
