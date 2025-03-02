@@ -4,11 +4,16 @@
 # This script creates head model directories for subjects in a project,
 # processing subjects either in serial (default) or in parallel (if --parallel is given).
 #
-# Usage:
-#   ./headmodel_parallel.sh <project_dir> [recon-all] [--parallel] [--quiet]
+# Additionally, it now supports a --recon-only option to run just the FreeSurfer recon-all
+# function (which requires that subject-specific T1 images already exist in the MRIs/ folder)
+# without performing DICOM conversion or head model generation.
 #
-#   <project_dir> : The project directory containing "dicoms/" subfolder.
-#   recon-all     : Optional; if provided, FreeSurfer recon-all is run afterward.
+# Usage:
+#   ./headmodel_parallel.sh <project_dir> [recon-all] [--recon-only] [--parallel] [--quiet]
+#
+#   <project_dir> : The project directory containing a "dicoms/" subfolder and/or an "MRIs/" subfolder.
+#   recon-all     : Optional; if provided (and not in --recon-only mode), FreeSurfer recon-all is run after head model creation.
+#   --recon-only  : Optional; if provided, only recon-all is run (all other processing is skipped).
 #   --parallel    : Optional; if provided, subjects are processed in parallel.
 #   --quiet       : Optional; if provided, output is suppressed.
 #
@@ -19,6 +24,7 @@
 
 # Default values for optional flags
 RUN_RECON=false
+RECON_ONLY=false
 PARALLEL=false
 QUIET=false
 PROJECT_DIR=""
@@ -34,6 +40,10 @@ while [[ $# -gt 0 ]]; do
       QUIET=true
       shift
       ;;
+    --recon-only)
+      RECON_ONLY=true
+      shift
+      ;;
     recon-all)
       RUN_RECON=true
       shift
@@ -44,7 +54,7 @@ while [[ $# -gt 0 ]]; do
         PROJECT_DIR="$1"
       else
         echo "Unknown argument: $1"
-        echo "Usage: $0 <project_dir> [recon-all] [--parallel] [--quiet]"
+        echo "Usage: $0 <project_dir> [recon-all] [--recon-only] [--parallel] [--quiet]"
         exit 1
       fi
       shift
@@ -55,7 +65,7 @@ done
 # Validate project directory
 if [[ -z "$PROJECT_DIR" ]]; then
   echo "Error: <project_dir> is required."
-  echo "Usage: $0 <project_dir> [recon-all] [--parallel] [--quiet]"
+  echo "Usage: $0 <project_dir> [recon-all] [--recon-only] [--parallel] [--quiet]"
   exit 1
 fi
 
@@ -65,7 +75,68 @@ if $QUIET; then
 fi
 
 ###############################################################################
-#                    CHECK REQUIRED COMMANDS AND DIRECTORIES
+#                   RECON-ONLY MODE: JUST RUN recon-all
+###############################################################################
+if $RECON_ONLY; then
+  echo "Running in recon-all only mode (skipping DICOM conversion and head model creation)."
+
+  if ! command -v recon-all &>/dev/null; then
+    echo "Error: recon-all (FreeSurfer) is not installed." >&2
+    exit 1
+  fi
+
+  # Define directories used for recon-all only
+  MRI_DIR="${PROJECT_DIR}/MRIs"
+  FS_RECON_DIR="${PROJECT_DIR}/fs_recon"   # Directory for FreeSurfer output
+
+  # Ensure the necessary directories exist
+  mkdir -p "$MRI_DIR" "$FS_RECON_DIR"
+
+  run_recon_only() {
+    subj_dir="$1"
+    subject=$(basename "$subj_dir")
+    T1_file="${subj_dir}/T1.nii"
+    if [ ! -f "$T1_file" ]; then
+      echo "  [$subject] Error: T1.nii not found in ${subj_dir}, skipping recon-all for this subject."
+      return
+    fi
+    echo "  [$subject] Running FreeSurfer recon-all..."
+    recon-all -subject "$subject" -i "$T1_file" -all -sd "$FS_RECON_DIR"
+    echo "Finished processing subject: $subject"
+  }
+
+  if ! $PARALLEL; then
+    echo "Running recon-all in SERIAL mode."
+    for subj_dir in "$MRI_DIR"/*; do
+      if [ -d "$subj_dir" ]; then
+        run_recon_only "$subj_dir"
+      fi
+    done
+  else
+    echo "Running recon-all in PARALLEL mode."
+    if ! command -v parallel &>/dev/null; then
+      echo "Error: GNU Parallel is not installed, but --parallel was requested." >&2
+      exit 1
+    fi
+    export FS_RECON_DIR
+    export MRI_DIR
+    export -f run_recon_only
+    find "$MRI_DIR" -mindepth 1 -maxdepth 1 -type d | sort | \
+      parallel \
+        --line-buffer \
+        --tagstring '[{= s:.*/:: =}] ' \
+        --progress \
+        --eta \
+        --halt now,fail=1 \
+        run_recon_only {}
+  fi
+
+  echo "Recon-all only mode completed."
+  exit 0
+fi
+
+###############################################################################
+#                 CHECK REQUIRED COMMANDS AND DIRECTORIES
 ###############################################################################
 
 if ! command -v dcm2niix &>/dev/null; then
@@ -85,9 +156,11 @@ if $RUN_RECON; then
   fi
 fi
 
-if ! command -v parallel &>/dev/null && $PARALLEL; then
-  echo "Error: GNU Parallel is not installed, but --parallel was requested." >&2
-  exit 1
+if $PARALLEL; then
+  if ! command -v parallel &>/dev/null; then
+    echo "Error: GNU Parallel is not installed, but --parallel was requested." >&2
+    exit 1
+  fi
 fi
 
 ###############################################################################
@@ -97,7 +170,7 @@ fi
 DICOM_DIR="${PROJECT_DIR}/dicoms"
 MRI_DIR="${PROJECT_DIR}/MRIs"
 HEAD_MODEL_DIR="${PROJECT_DIR}/head_models"
-FS_RECON_DIR="${PROJECT_DIR}/fs_recon"   # New directory for FreeSurfer output
+FS_RECON_DIR="${PROJECT_DIR}/fs_recon"   # Directory for FreeSurfer output
 
 # Create output directories if they don't exist
 mkdir -p "$MRI_DIR" "$HEAD_MODEL_DIR" "$FS_RECON_DIR"
@@ -197,26 +270,21 @@ export RUN_RECON
 #                           RUN IN SERIAL OR PARALLEL
 ###############################################################################
 
-# Find all subject directories
+# Find all subject directories in the dicoms folder
 SUBJECT_DIRS=$(find "$DICOM_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
 
 if ! $PARALLEL; then
-  # ------------------------ SERIAL PROCESSING (DEFAULT) -----------------------
   echo "Running in SERIAL mode."
   while IFS= read -r subj_dir; do
     process_subject "$subj_dir"
   done <<< "$SUBJECT_DIRS"
 else
-  # ------------------------ PARALLEL PROCESSING -------------------------------
   echo "Running in PARALLEL mode."
 
   # Determine number of cores
   CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu)
 
   # Run the process_subject function in parallel
-  # --line-buffer + --tagstring to label lines by subject name
-  # --progress + --eta to show overall progress
-  # --halt now,fail=1 to kill all jobs if one fails or on Ctrl+C
   echo "$SUBJECT_DIRS" | \
     parallel \
       --line-buffer \

@@ -114,5 +114,5 @@ echo "Mean:       $mean_val"
 echo "------------------------------"
 
 # Cleanup (comment out if you want to keep files for debugging)
-# rm -f "$tmp_atlas" "$mask_native" "$mask_resampled"
+rm -f "$tmp_atlas" "$mask_native" "$mask_resampled"
 
